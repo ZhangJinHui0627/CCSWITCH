@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> **非官方定制修改版 (Unofficial Custom Fork)**
+>
+> 本仓库为 [farion1231/cc-switch](https://github.com/farion1231/cc-switch) 的非官方定制分支，由 [ZhangJinHui0627](https://github.com/ZhangJinHui0627/CCSWITCH) 维护。
+> 原始代码版权归原作者 Jason Young 所有（遵循 [MIT License](./LICENSE)）。修改与合规声明详见 [NOTICE.md](./NOTICE.md)。
+> 本版本彻底禁用了对官方更新源的检测，集成了 AGY / DSH / ZCode 会话同步及定价种子等定制扩展。
+
 <div align="center">
 
 # CC Switch
