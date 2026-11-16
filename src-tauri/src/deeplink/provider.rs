@@ -366,6 +366,8 @@ pub(crate) fn build_provider_from_request(
                 "Oh My Pi providers must be added from the Oh My Pi provider page".to_string(),
             ));
         }
+        // ZCode / DSH 供应商与 Claude 同形（env.ANTHROPIC_BASE_URL / env.ANTHROPIC_AUTH_TOKEN）
+        AppType::Zcode | AppType::Dsh => build_claude_settings(request),
     };
 
     // Build usage script configuration if provided

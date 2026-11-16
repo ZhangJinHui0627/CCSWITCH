@@ -227,6 +227,13 @@ export const providersApi = {
   },
 
   /**
+   * 从 DeepSeek Harness live 配置导入供应商到数据库
+   */
+  async importDshFromLive(): Promise<number> {
+    return await invoke("import_dsh_providers_from_live");
+  },
+
+  /**
    * 获取 OpenCode live 配置中的供应商 ID 列表
    * 用于前端判断供应商是否已添加到 opencode.json
    */

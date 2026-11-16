@@ -308,6 +308,8 @@ fn settings_contain_common_config(app_type: &AppType, settings: &Value, snippet:
         | AppType::Kimi
         | AppType::Agy
         | AppType::Omp
+        | AppType::Zcode
+        | AppType::Dsh
         | AppType::ClaudeDesktop => false,
     }
 }
@@ -387,7 +389,9 @@ pub(crate) fn remove_common_config_from_settings(
         | AppType::Kimi
         | AppType::ClaudeDesktop
         | AppType::Agy
-        | AppType::Omp => Ok(settings.clone()),
+        | AppType::Omp
+        | AppType::Zcode
+        | AppType::Dsh => Ok(settings.clone()),
     }
 }
 
@@ -723,6 +727,8 @@ pub(crate) fn write_live_snapshot(app_type: &AppType, provider: &Provider) -> Re
                 "Oh My Pi providers use the Oh My Pi provider service".to_string(),
             ));
         }
+        // ZCode 和 DSH 供应商仅存于 CC Switch 库中，无 live 配置可写
+        AppType::Zcode | AppType::Dsh => {},
     }
     Ok(())
 }
@@ -732,6 +738,10 @@ pub(crate) fn write_live_snapshot(app_type: &AppType, provider: &Provider) -> Re
 /// Writes all providers from the database to the live configuration file.
 /// Used for OpenCode and other additive mode applications.
 fn sync_all_providers_to_live(state: &AppState, app_type: &AppType) -> Result<(), AppError> {
+    // ZCode 和 DSH 没有 live 配置文件，供应商只存在于 CC Switch 数据库
+    if *app_type == AppType::Zcode || *app_type == AppType::Dsh {
+        return Ok(());
+    }
     let providers = state.db.get_all_providers(app_type.as_str())?;
     let mut synced_count = 0usize;
 
@@ -855,7 +865,7 @@ pub fn sync_current_to_live(state: &AppState) -> Result<(), AppError> {
     for app_type in AppType::all() {
         if matches!(
             app_type,
-            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Omp
+            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Omp | AppType::Zcode
         ) {
             continue;
         }
@@ -1020,6 +1030,13 @@ pub fn read_live_settings(app_type: AppType) -> Result<Value, AppError> {
         AppType::Omp => Err(AppError::InvalidInput(
             "Oh My Pi providers are read from Oh My Pi's native models file".to_string(),
         )),
+        AppType::Zcode => Err(AppError::InvalidInput(
+            "ZCode providers are managed in CC Switch only".to_string(),
+        )),
+        AppType::Dsh => {
+            let providers = crate::dsh_config::get_dsh_live_providers();
+            Ok(serde_json::to_value(providers).unwrap_or_default())
+        }
     }
 }
 
@@ -1028,6 +1045,9 @@ pub fn read_live_settings(app_type: AppType) -> Result<Value, AppError> {
 /// Returns `Ok(true)` if a provider was actually imported,
 /// `Ok(false)` if skipped (providers already exist for this app).
 pub fn import_default_config(state: &AppState, app_type: AppType) -> Result<bool, AppError> {
+    if app_type == AppType::Dsh {
+        return import_dsh_providers_from_live(state).map(|n| n > 0);
+    }
     // Additive mode apps (OpenCode, OpenClaw) should use their dedicated
     // import_xxx_providers_from_live functions, not this generic default config import
     if app_type.is_additive_mode() {
@@ -1140,7 +1160,9 @@ pub fn import_default_config(state: &AppState, app_type: AppType) -> Result<bool
         | AppType::Pi
         | AppType::Mcode
         | AppType::Kimi
-        | AppType::Omp => {
+        | AppType::Omp
+        | AppType::Zcode
+        | AppType::Dsh => {
             unreachable!("additive mode apps are handled by early return")
         }
     };
@@ -1486,6 +1508,72 @@ pub fn import_hermes_providers_from_live(state: &AppState) -> Result<usize, AppE
 
         imported += 1;
         log::info!("Imported Hermes provider '{name}' from live config");
+    }
+
+    Ok(imported + updated)
+}
+
+/// Import all providers from DeepSeek Harness live config to database
+pub fn import_dsh_providers_from_live(state: &AppState) -> Result<usize, AppError> {
+    use crate::dsh_config;
+
+    let dsh_providers = dsh_config::get_dsh_live_providers();
+    if dsh_providers.is_empty() {
+        return Ok(0);
+    }
+
+    let mut imported = 0;
+    let mut updated = 0;
+    let existing_ids = state.db.get_provider_ids("dsh")?;
+    let has_current = state.db.get_current_provider("dsh")?.is_some();
+
+    for dsh_p in dsh_providers {
+        let is_current = !has_current && (imported == 0 || dsh_p.is_default);
+
+        if existing_ids.contains(&dsh_p.id) {
+            match state.db.get_provider_by_id(&dsh_p.id, "dsh") {
+                Ok(Some(existing)) => {
+                    let mut provider = existing;
+                    provider.name = dsh_p.name;
+                    provider.settings_config = dsh_p.settings_config;
+                    if let Some(ref url) = dsh_p.base_url {
+                        provider.website_url = Some(url.clone());
+                    }
+                    if let Err(e) = state.db.save_provider("dsh", &provider) {
+                        log::warn!(
+                            "Failed to update DSH provider '{}' from live config: {e}",
+                            dsh_p.id
+                        );
+                    } else {
+                        updated += 1;
+                        log::info!("Updated DSH provider '{}' from live config", dsh_p.id);
+                    }
+                }
+                Ok(None) => {}
+                Err(e) => log::warn!("Failed to look up DSH provider '{}': {e}", dsh_p.id),
+            }
+            continue;
+        }
+
+        let mut provider = Provider::with_id(
+            dsh_p.id.clone(),
+            dsh_p.name.clone(),
+            dsh_p.settings_config,
+            dsh_p.base_url,
+        );
+        provider.category = Some("custom".to_string());
+        provider.icon = Some("deepseek".to_string());
+        if let Err(e) = state.db.save_provider("dsh", &provider) {
+            log::warn!("Failed to import DSH provider '{}': {e}", dsh_p.id);
+            continue;
+        }
+
+        if is_current {
+            let _ = state.db.set_current_provider("dsh", &dsh_p.id);
+        }
+
+        imported += 1;
+        log::info!("Imported DSH provider '{}' from live config", dsh_p.id);
     }
 
     Ok(imported + updated)

@@ -152,6 +152,9 @@ export function extractBaseUrlForUsageDetection(
     case "openclaw":
       raw = settingsConfig.baseUrl;
       break;
+    case "zcode":
+      raw = settingsConfig.env?.ANTHROPIC_BASE_URL;
+      break;
     case "kimi":
       raw = settingsConfig.provider?.base_url;
       break;

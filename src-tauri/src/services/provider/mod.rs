@@ -39,8 +39,8 @@ use crate::store::AppState;
 
 // Re-export sub-module functions for external access
 pub use live::{
-    import_default_config, import_hermes_providers_from_live, import_openclaw_providers_from_live,
-    import_opencode_providers_from_live, read_live_settings,
+    import_default_config, import_dsh_providers_from_live, import_hermes_providers_from_live,
+    import_openclaw_providers_from_live, import_opencode_providers_from_live, read_live_settings,
     should_import_default_config_on_startup, sync_current_to_live,
 };
 
@@ -7236,7 +7236,7 @@ impl ProviderService {
             AppType::OpenCode => Self::extract_opencode_common_config(&provider.settings_config),
             AppType::OpenClaw => Self::extract_openclaw_common_config(&provider.settings_config),
             AppType::Hermes => Ok(String::new()), // Hermes doesn't use common config snippets
-            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp => {
+            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp | AppType::Zcode | AppType::Dsh => {
                 Ok(String::new())
             }
         }
@@ -7256,7 +7256,7 @@ impl ProviderService {
             AppType::OpenCode => Self::extract_opencode_common_config(settings_config),
             AppType::OpenClaw => Self::extract_openclaw_common_config(settings_config),
             AppType::Hermes => Ok(String::new()), // Hermes doesn't use common config snippets
-            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp => {
+            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp | AppType::Zcode | AppType::Dsh => {
                 Ok(String::new())
             }
         }
@@ -7903,6 +7903,15 @@ impl ProviderService {
                     ));
                 }
             }
+            AppType::Zcode | AppType::Dsh => {
+                if !provider.settings_config.is_object() {
+                    return Err(AppError::localized(
+                        "provider.settings.not_object",
+                        "配置必须是 JSON 对象",
+                        "Configuration must be a JSON object",
+                    ));
+                }
+            }
             AppType::ClaudeDesktop => {
                 crate::claude_desktop_config::validate_provider(provider)?;
             }
@@ -8054,7 +8063,7 @@ impl ProviderService {
         app_type: &AppType,
     ) -> Result<(String, String), AppError> {
         match app_type {
-            AppType::Claude => {
+            AppType::Zcode | AppType::Claude | AppType::Dsh => {
                 let env = provider
                     .settings_config
                     .get("env")
