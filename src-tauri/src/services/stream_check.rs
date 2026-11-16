@@ -178,6 +178,9 @@ impl StreamCheckService {
             AppType::Hermes => Self::extract_hermes_base_url(provider),
             AppType::Pi => crate::pi_config::provider_base_url(&provider.settings_config),
             AppType::Omp => crate::omp_config::provider_base_url(&provider.settings_config),
+            AppType::Zcode => ClaudeAdapter::new()
+                .extract_base_url(provider)
+                .map_err(|e| AppError::Message(format!("Failed to extract base_url: {e}"))),
             AppType::ClaudeDesktop => ClaudeAdapter::new()
                 .extract_base_url(provider)
                 .map_err(|e| AppError::Message(format!("Failed to extract base_url: {e}"))),

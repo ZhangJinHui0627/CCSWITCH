@@ -182,6 +182,20 @@ pub async fn get_config_status(
                 path,
             })
         }
+        AppType::Zcode => {
+            let dir = crate::zcode_config::get_zcode_dir();
+            Ok(ConfigStatus {
+                exists: crate::zcode_config::zcode_settings_path().exists(),
+                path: dir.to_string_lossy().into_owned(),
+            })
+        }
+        AppType::Dsh => {
+            let dir = crate::dsh_config::get_dsh_dir();
+            Ok(ConfigStatus {
+                exists: crate::dsh_config::dsh_installed(),
+                path: dir.to_string_lossy().into_owned(),
+            })
+        }
     }
 }
 
@@ -206,6 +220,8 @@ pub async fn get_config_dir(app: String) -> Result<String, String> {
         AppType::Pi => crate::pi_config::get_pi_agent_dir().map_err(|e| e.to_string())?,
         AppType::Kimi => crate::kimi_config::data_dir(),
         AppType::Omp => crate::omp_config::get_omp_agent_dir().map_err(|e| e.to_string())?,
+        AppType::Zcode => crate::zcode_config::get_zcode_dir(),
+        AppType::Dsh => crate::dsh_config::get_dsh_dir(),
         AppType::Mcode => crate::mcode_config::config_path()
             .parent()
             .unwrap()
@@ -232,6 +248,8 @@ pub async fn open_config_folder(handle: AppHandle, app: String) -> Result<bool, 
         AppType::Pi => crate::pi_config::get_pi_agent_dir().map_err(|e| e.to_string())?,
         AppType::Kimi => crate::kimi_config::data_dir(),
         AppType::Omp => crate::omp_config::get_omp_agent_dir().map_err(|e| e.to_string())?,
+        AppType::Zcode => crate::zcode_config::get_zcode_dir(),
+        AppType::Dsh => crate::dsh_config::get_dsh_dir(),
         AppType::Mcode => crate::mcode_config::config_path()
             .parent()
             .unwrap()

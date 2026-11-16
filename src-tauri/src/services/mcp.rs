@@ -293,6 +293,7 @@ impl McpService {
 
     fn sync_server_to_app_no_config(server: &McpServer, app: &AppType) -> Result<(), AppError> {
         match app {
+            AppType::Zcode | AppType::Dsh => {} // ZCode / DSH 暂不支持 MCP
             AppType::Claude => {
                 mcp::sync_single_server_to_claude(&Default::default(), &server.id, &server.server)?;
             }
@@ -358,6 +359,7 @@ impl McpService {
 
     fn remove_server_from_app(_state: &AppState, id: &str, app: &AppType) -> Result<(), AppError> {
         match app {
+            AppType::Zcode | AppType::Dsh => {} // ZCode / DSH 暂不支持 MCP
             AppType::Claude => mcp::remove_server_from_claude(id)?,
             AppType::ClaudeDesktop => {
                 log::debug!("Claude Desktop 3P profiles do not use CC Switch MCP sync, skipping");

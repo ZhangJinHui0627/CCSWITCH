@@ -100,6 +100,7 @@ impl Database {
             AppType::Kimi => Some("enabled_kimi"),
             AppType::Pi => Some("enabled_pi"),
             AppType::Omp => Some("enabled_omp"),
+            AppType::Zcode | AppType::Dsh => None, // ZCode / DSH 暂不支持 MCP
             AppType::ClaudeDesktop | AppType::OpenClaw => None,
             AppType::Agy => Some("enabled_agy"),
         };

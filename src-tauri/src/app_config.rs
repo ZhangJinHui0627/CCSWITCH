@@ -46,6 +46,7 @@ impl McpApps {
             AppType::Kimi => self.kimi,
             AppType::Pi => self.pi,
             AppType::Omp => self.omp,
+            AppType::Zcode | AppType::Dsh => false, // ZCode / DSH 暂不支持 MCP
             AppType::ClaudeDesktop => false,
             AppType::Agy => self.agy,
         }
@@ -67,6 +68,7 @@ impl McpApps {
             AppType::ClaudeDesktop => {}
             AppType::Agy => self.agy = enabled,
             AppType::Omp => self.omp = enabled,
+            AppType::Zcode | AppType::Dsh => {} // ZCode / DSH 暂不支持 MCP
         }
     }
 
@@ -168,6 +170,7 @@ impl SkillApps {
             AppType::OpenClaw => false,
             AppType::Agy => self.agy,
             AppType::Omp => self.omp,
+            AppType::Zcode | AppType::Dsh => false, // ZCode / DSH 暂不参与技能同步
             AppType::ClaudeDesktop => false,
         }
     }
@@ -187,6 +190,7 @@ impl SkillApps {
             AppType::OpenClaw => {}
             AppType::Agy => self.agy = enabled,
             AppType::Omp => self.omp = enabled,
+            AppType::Zcode | AppType::Dsh => {} // ZCode / DSH 暂不参与技能同步
             AppType::ClaudeDesktop => {} // Claude Desktop 3P profiles don't use CC Switch skill sync
         }
     }
@@ -466,6 +470,8 @@ pub enum AppType {
     Kimi,
     Agy,
     Omp,
+    Zcode,
+    Dsh,
 }
 
 impl AppType {
@@ -484,6 +490,8 @@ impl AppType {
             AppType::Kimi => "kimi",
             AppType::Agy => "agy",
             AppType::Omp => "omp",
+            AppType::Zcode => "zcode",
+            AppType::Dsh => "dsh",
         }
     }
 
@@ -502,6 +510,8 @@ impl AppType {
                 | AppType::Mcode
                 | AppType::Kimi
                 | AppType::Omp
+                | AppType::Zcode
+                | AppType::Dsh
         )
     }
 
@@ -535,6 +545,8 @@ impl AppType {
             AppType::Kimi,
             AppType::Agy,
             AppType::Omp,
+            AppType::Zcode,
+            AppType::Dsh,
         ]
         .into_iter()
     }
@@ -559,10 +571,12 @@ impl FromStr for AppType {
             "kimi" | "kimi-code" => Ok(AppType::Kimi),
             "agy" | "antigravity" | "antigravity-cli" => Ok(AppType::Agy),
             "omp" | "oh-my-pi" | "oh_my_pi" | "ohmypi" => Ok(AppType::Omp),
+            "zcode" | "z-code" => Ok(AppType::Zcode),
+            "dsh" | "deepseek-harness" | "deepseek_harness" => Ok(AppType::Dsh),
             other => Err(AppError::localized(
                 "unsupported_app",
-                format!("不支持的应用标识: '{other}'。可选值: claude, claude-desktop, codex, gemini, grokbuild, opencode, openclaw, hermes, pi, mcode, kimi, agy, omp。"),
-                format!("Unsupported app id: '{other}'. Allowed: claude, claude-desktop, codex, gemini, grokbuild, opencode, openclaw, hermes, pi, mcode, kimi, agy, omp."),
+                format!("不支持的应用标识: '{other}'。可选值: claude, claude-desktop, codex, gemini, grokbuild, opencode, openclaw, hermes, pi, mcode, kimi, agy, omp, zcode, dsh。"),
+                format!("Unsupported app id: '{other}'. Allowed: claude, claude-desktop, codex, gemini, grokbuild, opencode, openclaw, hermes, pi, mcode, kimi, agy, omp, zcode, dsh."),
             )),
         }
     }
@@ -602,7 +616,7 @@ impl CommonConfigSnippets {
             AppType::OpenCode => self.opencode.as_ref(),
             AppType::OpenClaw => self.openclaw.as_ref(),
             AppType::Hermes => self.hermes.as_ref(),
-            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp => None,
+            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp | AppType::Zcode | AppType::Dsh => None,
         }
     }
 
@@ -617,7 +631,7 @@ impl CommonConfigSnippets {
             AppType::OpenCode => self.opencode = snippet,
             AppType::OpenClaw => self.openclaw = snippet,
             AppType::Hermes => self.hermes = snippet,
-            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp => {}
+            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp | AppType::Zcode | AppType::Dsh => {},
         }
     }
 }
@@ -944,7 +958,7 @@ impl MultiAppConfig {
             AppType::Hermes => &mut config.prompts.hermes.prompts,
             // Pi was added after prompts moved to SQLite. Keeping it out of
             // this legacy config avoids a second, unused prompt state.
-            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp => {
+            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp | AppType::Zcode | AppType::Dsh => {
                 return Ok(false)
             }
         };
@@ -990,7 +1004,7 @@ impl MultiAppConfig {
                 AppType::OpenCode => &self.mcp.opencode.servers,
                 AppType::OpenClaw => continue, // OpenClaw MCP is still in development, skip
                 AppType::Hermes => continue,   // Hermes didn't exist in v3.6.x, skip
-                AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp => {
+                AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp | AppType::Zcode | AppType::Dsh => {
                     continue
                 } // Pi didn't exist in v3.6.x, skip
             };

@@ -19,7 +19,7 @@ pub(crate) fn validate_prompt_content(app: &AppType, content: &str) -> Result<()
 
 /// 返回指定应用所使用的提示词文件路径。
 pub fn prompt_file_path(app: &AppType) -> Result<PathBuf, AppError> {
-    if matches!(app, AppType::ClaudeDesktop) {
+    if matches!(app, AppType::ClaudeDesktop | AppType::Zcode | AppType::Dsh) {
         return Err(AppError::localized(
             "app.prompts_unsupported",
             "当前应用暂不支持 Prompts",
@@ -43,6 +43,7 @@ pub fn prompt_file_path(app: &AppType) -> Result<PathBuf, AppError> {
         AppType::Agy => crate::agy_config::customizations_dir(),
         // omp 只读按 profile 切换的 agent 目录里的 AGENTS.md（上游 discovery/builtin.ts）
         AppType::Omp => crate::omp_config::get_omp_agent_dir()?,
+        AppType::Zcode | AppType::Dsh => unreachable!("handled above"),
         AppType::ClaudeDesktop => unreachable!("handled above"),
     };
 
@@ -53,6 +54,7 @@ pub fn prompt_file_path(app: &AppType) -> Result<PathBuf, AppError> {
         AppType::GrokBuild | AppType::OpenCode | AppType::OpenClaw => "AGENTS.md",
         AppType::Hermes => "SOUL.md",
         AppType::Pi | AppType::Mcode | AppType::Agy | AppType::Kimi | AppType::Omp => "AGENTS.md",
+        AppType::Zcode | AppType::Dsh => unreachable!("handled above"),
         AppType::ClaudeDesktop => unreachable!("handled above"),
     };
 

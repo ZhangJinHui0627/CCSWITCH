@@ -33,6 +33,8 @@ mod mcp;
 pub mod mode;
 mod model_capabilities;
 mod omp_config;
+mod zcode_config;
+mod dsh_config;
 mod openclaw_config;
 mod opencode_config;
 mod panic_hook;
@@ -979,6 +981,13 @@ pub fn run() {
                 Ok(_) => log::debug!("○ No Oh My Pi provider changes from native config"),
                 Err(e) => log::warn!("✗ Failed to import Oh My Pi providers: {e}"),
             }
+            match crate::services::provider::import_dsh_providers_from_live(&app_state) {
+                Ok(count) if count > 0 => {
+                    log::info!("✓ Synced {count} DeepSeek Harness provider(s) from live config");
+                }
+                Ok(_) => log::debug!("○ No DeepSeek Harness provider changes from live config"),
+                Err(e) => log::warn!("✗ Failed to import DeepSeek Harness providers: {e}"),
+            }
 
             // 2. OMO 配置导入（当数据库中无 OMO provider 时，从本地文件导入）
             {
@@ -1828,6 +1837,7 @@ pub fn run() {
             commands::delete_custom_icon,
             // OpenCode specific
             commands::import_opencode_providers_from_live,
+            commands::import_dsh_providers_from_live,
             commands::get_opencode_live_provider_ids,
             commands::get_opencode_default_model,
             commands::set_opencode_default_model,
