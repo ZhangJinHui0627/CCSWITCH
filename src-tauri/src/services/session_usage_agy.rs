@@ -10,20 +10,194 @@ use crate::{
 };
 use rusqlite::{params, OptionalExtension};
 use serde_json::Value;
-use std::path::Path;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 
 mod native_models;
 
+/// DSH 的 `dsh-agy-link` 插件会把 DSH 的请求转发到 AGY 的账号额度上，AGY 侧因此
+/// 也会留下 transcript。这些行属于"DSH 用了 AGY 的配额"，不该记在 Antigravity 名下。
+///
+/// 插件在 `~/.dsh/agy-link/sessions.json` 里登记了 `DSH 会话 -> AGY conversationId`
+/// 的映射，conversationId 正好就是 AGY transcript 的目录名（= 我们写入的 session_id）。
+/// 直接按这张表排除，比按 token/时间比对精确得多，也不受模型名变化影响。
+fn dsh_agy_link_path() -> Option<PathBuf> {
+    let home = std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(PathBuf::from)?;
+    Some(home.join(".dsh").join("agy-link").join("sessions.json"))
+}
+
+/// 黑名单文件：登记表会随插件清理而变短，若不落地记录，历史行会在下次同步被重新扫回来。
+fn proxied_blacklist_path() -> Option<PathBuf> {
+    dsh_agy_link_path().and_then(|p| p.parent().map(|d| d.join("proxied-conversations.json")))
+}
+
+fn read_proxied_blacklist() -> HashSet<String> {
+    let Some(path) = proxied_blacklist_path() else {
+        return HashSet::new();
+    };
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return HashSet::new();
+    };
+    serde_json::from_str::<Vec<String>>(&text)
+        .map(|v| v.into_iter().collect())
+        .unwrap_or_default()
+}
+
+fn write_proxied_blacklist(ids: &HashSet<String>) {
+    let Some(path) = proxied_blacklist_path() else {
+        return;
+    };
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let mut sorted: Vec<&String> = ids.iter().collect();
+    sorted.sort();
+    if let Ok(text) = serde_json::to_string_pretty(&sorted) {
+        if let Err(e) = std::fs::write(&path, text) {
+            log::warn!("[AGY-SYNC] 写入代理会话黑名单失败: {e}");
+        }
+    }
+}
+
+/// 插件登记表里的所有 AGY conversationId，与本地黑名单合并。
+fn proxied_conversations() -> HashSet<String> {
+    let mut set = read_proxied_blacklist();
+
+    let Some(path) = dsh_agy_link_path() else {
+        return set;
+    };
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return set;
+    };
+    let Ok(value) = serde_json::from_str::<Value>(&text) else {
+        log::warn!("[AGY-SYNC] 解析 dsh-agy-link 登记表失败: {}", path.display());
+        return set;
+    };
+
+    let mut grew = false;
+    if let Some(map) = value.as_object() {
+        for meta in map.values() {
+            if let Some(cid) = meta.get("conversationId").and_then(|v| v.as_str()) {
+                if !cid.is_empty() && set.insert(cid.to_string()) {
+                    grew = true;
+                }
+            }
+        }
+    }
+
+    // 新增的 ID 立刻落地，插件以后清理登记表也不会让历史行复活
+    if grew {
+        write_proxied_blacklist(&set);
+        log::info!("[AGY-SYNC] 已登记 {} 个插件转发的 AGY 会话", set.len());
+    }
+
+    set
+}
+
+/// 删掉已入库的、由插件转发产生的 AGY 行（含去重墓碑），返回删除条数。
+fn purge_proxied_rows(db: &Database, proxied: &HashSet<String>) -> Result<u32, AppError> {
+    if proxied.is_empty() {
+        return Ok(0);
+    }
+    let conn = lock_conn!(db.conn);
+    let mut removed = 0u32;
+    for cid in proxied {
+        let deleted = conn.execute(
+            "DELETE FROM proxy_request_logs WHERE app_type='agy' AND session_id=?1",
+            [cid],
+        )?;
+        if deleted > 0 {
+            // 墓碑一并清掉，避免下次同步把它们当成"已导入"却又没有明细
+            let _ = conn.execute(
+                "DELETE FROM session_usage_dedup WHERE data_source='agy_session' AND request_id LIKE ?1",
+                [format!("agy:{cid}:%")],
+            );
+            removed += deleted as u32;
+            log::info!("[AGY-SYNC] 清理插件转发会话 {cid}: 删除 {deleted} 行");
+        }
+    }
+    Ok(removed)
+}
+
+/// 冷却期：transcript 刚被写过，说明这一轮可能还在转发，插件尚未登记该 conversationId。
+///
+/// 实测插件是"转发完成后才写 sessions.json"（`rec.settle()` 之后），首次绑定时还要
+/// 等 `lastMessageCount` 累积，观察到的滞后可达 78 秒。因此新会话必须等足够久再入库。
+const TRANSCRIPT_COOLDOWN_MS: u128 = 90_000;
+
+/// 已有历史行的会话，说明它早已被确认为真实 AGY 用量，冷却期可以短一些（只防"写一半"）。
+const TRANSCRIPT_COOLDOWN_KNOWN_MS: u128 = 10_000;
+
+/// transcript 是否在给定窗口内被写过。
+fn transcript_is_hot(path: &Path, window_ms: u128) -> bool {
+    let Ok(meta) = std::fs::metadata(path) else {
+        return false;
+    };
+    let Ok(modified) = meta.modified() else {
+        return false;
+    };
+    match modified.elapsed() {
+        Ok(age) => age.as_millis() < window_ms,
+        // 时钟回拨等异常情况，保守当作"热"，本轮先跳过
+        Err(_) => true,
+    }
+}
+
+/// 这个会话在库里是否已有行（= 已经被判定为真实 AGY 会话）。
+fn session_has_rows(conn: &rusqlite::Connection, session_id: &str) -> bool {
+    conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM proxy_request_logs WHERE app_type='agy' AND session_id=?1)",
+        [session_id],
+        |row| row.get::<_, bool>(0),
+    )
+    .unwrap_or(false)
+}
+
 pub fn sync_agy_usage(db: &Database) -> Result<SessionSyncResult, AppError> {
     let mut result = SessionSyncResult::default();
+    let proxied = proxied_conversations();
+
+    // 先把历史误记的行清掉，再跳过这些会话的扫描
+    match purge_proxied_rows(db, &proxied) {
+        Ok(n) if n > 0 => {
+            result.skipped += n;
+        }
+        Ok(_) => {}
+        Err(e) => result.errors.push(format!("AGY 清理转发会话失败: {e}")),
+    }
+
     for session in agy::scan_sessions() {
+        if proxied.contains(&session.session_id) {
+            // 插件转发产生的会话，不计入 Antigravity 统计
+            continue;
+        }
         let Some(path) = session.source_path else {
             continue;
         };
+        let transcript = Path::new(&path);
+
+        // 冷却期：transcript 刚被写过，说明可能还在转发，插件尚未登记该 conversationId。
+        // 新会话等 90 秒（插件首次绑定可能滞后很久），已有历史的会话只等 10 秒。
+        let known = {
+            let conn = lock_conn!(db.conn);
+            session_has_rows(&conn, &session.session_id)
+        };
+        let window = if known {
+            TRANSCRIPT_COOLDOWN_KNOWN_MS
+        } else {
+            TRANSCRIPT_COOLDOWN_MS
+        };
+        if transcript_is_hot(transcript, window) {
+            result.deferred_files += 1;
+            continue;
+        }
+
         result.files_scanned += 1;
-        match agy::records(std::path::Path::new(&path)) {
+        match agy::records(transcript) {
             Ok(rows) => {
-                match import_records(db, &session.session_id, &rows, Some(Path::new(&path))) {
+                match import_records(db, &session.session_id, &rows, Some(transcript)) {
                     Ok((imported, skipped)) => {
                         result.imported += imported;
                         result.skipped += skipped;

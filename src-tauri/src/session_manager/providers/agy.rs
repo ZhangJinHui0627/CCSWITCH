@@ -46,15 +46,20 @@ fn session_sources() -> Vec<(PathBuf, Option<PathBuf>)> {
 pub(crate) fn records(path: &Path) -> Result<Vec<Value>, String> {
     let file =
         fs::File::open(path).map_err(|e| format!("Cannot read Antigravity transcript: {e}"))?;
-    // The export can rewrite steps as they finish. The latest record for a step wins.
-    let mut steps = BTreeMap::new();
+    // The export can rewrite steps as they finish: the latest record of each (step, type) wins.
+    //
+    // 不能只按 step_index 去重——同一步先写 PLANNER_RESPONSE（带 token），结束时会再补一条
+    // GENERIC/SYSTEM 收尾记录；只按 step_index 保留最后一条，会把带 token 的响应顶掉，
+    // 这一步的用量就永久丢了。
+    let mut steps: BTreeMap<(u64, String), Value> = BTreeMap::new();
     for line in BufReader::new(file).lines() {
         let line = line.map_err(|e| format!("Cannot read Antigravity transcript: {e}"))?;
         let Ok(value) = serde_json::from_str::<Value>(&line) else {
             continue;
         };
         if let Some(index) = value["step_index"].as_u64() {
-            steps.insert(index, value);
+            let kind = value["type"].as_str().unwrap_or("").to_string();
+            steps.insert((index, kind), value);
         }
     }
     Ok(steps.into_values().collect())
@@ -64,15 +69,25 @@ pub fn scan_sessions() -> Vec<SessionMeta> {
     scan_roots(&session_sources())
 }
 
-/// Missing roots are tolerated; a session id found in several roots is reported once (first wins).
+/// Missing roots are tolerated; a session id found in several roots is reported once.
+///
+/// 同一个 id 可能两个根都有：CLI 的 `conversation_summaries.db` 里留着一条只有摘要的旧记录
+/// （没有 transcript），而 IDE 的 `brain/<id>/` 里有真正可读的 transcript。早先"先到先得"
+/// 会让摘要那份胜出，于是这个会话永远扫不到用量。现在有 transcript 的那份优先，两份都没有
+/// transcript 时仍保留先到的。
 fn scan_roots(sources: &[(PathBuf, Option<PathBuf>)]) -> Vec<SessionMeta> {
-    let mut seen = std::collections::HashSet::new();
-    let mut sessions = Vec::new();
+    let mut index = std::collections::HashMap::<String, usize>::new();
+    let mut sessions: Vec<SessionMeta> = Vec::new();
     for (root, gemini_dir) in sources {
         for meta in scan_root(root, gemini_dir.as_deref()) {
-            if seen.insert(meta.session_id.clone()) {
-                sessions.push(meta);
+            if let Some(&at) = index.get(&meta.session_id) {
+                if sessions[at].source_path.is_none() && meta.source_path.is_some() {
+                    sessions[at] = meta;
+                }
+                continue;
             }
+            index.insert(meta.session_id.clone(), sessions.len());
+            sessions.push(meta);
         }
     }
     sessions
