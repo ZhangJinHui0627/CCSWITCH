@@ -23,26 +23,10 @@ export async function getCurrentVersion(): Promise<string> {
 }
 
 export async function checkForUpdate(
-  opts: CheckOptions = {},
+  _opts: CheckOptions = {},
 ): Promise<
   { status: "up-to-date" } | { status: "available"; info: UpdateInfo }
 > {
-  // 动态引入，避免在未安装插件时导致打包期问题
-  const { check } = await import("@tauri-apps/plugin-updater");
-
-  const currentVersion = await getCurrentVersion();
-  const update = await check({ timeout: opts.timeout ?? 30000 } as any);
-
-  if (!update) {
-    return { status: "up-to-date" };
-  }
-
-  const info: UpdateInfo = {
-    currentVersion,
-    availableVersion: (update as any).version ?? "",
-    notes: (update as any).notes,
-    pubDate: (update as any).date,
-  };
-
-  return { status: "available", info };
+  // 非官方定制版：彻底禁用自动更新检测，防止向外部服务器请求
+  return { status: "up-to-date" };
 }

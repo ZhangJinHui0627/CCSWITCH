@@ -104,13 +104,13 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
 
       if (!displayVersion) {
         await settingsApi.openExternal(
-          "https://github.com/farion1231/cc-switch/releases",
+          "https://github.com/ZhangJinHui0627/CCSWITCH/releases",
         );
         return;
       }
 
       await settingsApi.openExternal(
-        `https://github.com/farion1231/cc-switch/releases/tag/${displayVersion}`,
+        `https://github.com/ZhangJinHui0627/CCSWITCH/releases/tag/${displayVersion}`,
       );
     } catch (error) {
       console.error("[AboutSection] Failed to open release notes", error);
@@ -132,65 +132,18 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
   }, []);
 
   const handleCheckUpdate = useCallback(async () => {
-    if (hasUpdate) {
-      if (isPortable) {
-        try {
-          await settingsApi.openPortableUpdateDownload(
-            updateInfo?.availableVersion ?? "",
-          );
-        } catch (error) {
-          console.error("[AboutSection] Portable update failed", error);
-        }
-        return;
-      }
-
-      setIsDownloading(true);
-      try {
-        resetDismiss();
-        const installed = await settingsApi.installUpdateAndRestart();
-        if (!installed) {
-          toast.success(t("settings.upToDate"), { closeButton: true });
-        }
-      } catch (error) {
-        console.error("[AboutSection] Update failed", error);
-        toast.error(t("settings.updateFailed"), {
-          description: extractErrorMessage(error) || undefined,
-          closeButton: true,
-        });
-        try {
-          await settingsApi.checkUpdates();
-        } catch (fallbackError) {
-          console.error(
-            "[AboutSection] Failed to open fallback updater",
-            fallbackError,
-          );
-        }
-      } finally {
-        setIsDownloading(false);
-      }
-      return;
-    }
-
-    try {
-      const available = await checkUpdate();
-      if (!available) {
-        toast.success(t("settings.upToDate"), { closeButton: true });
-      }
-    } catch (error) {
-      console.error("[AboutSection] Check update failed", error);
-      toast.error(t("settings.checkUpdateFailed"), {
-        description: extractErrorMessage(error) || undefined,
-        closeButton: true,
-      });
-    }
-  }, [
-    checkUpdate,
-    hasUpdate,
-    isPortable,
-    resetDismiss,
-    t,
-    updateInfo?.availableVersion,
-  ]);
+    toast.info(t("settings.updateDisabledNotice"), {
+      description: t("settings.manualUpdateHint"),
+      action: {
+        label: t("settings.viewReleases"),
+        onClick: () =>
+          void settingsApi.openExternal(
+            "https://github.com/ZhangJinHui0627/CCSWITCH/releases",
+          ),
+      },
+      closeButton: true,
+    });
+  }, [t]);
 
   const displayVersion = version ?? t("common.unknown");
 
@@ -220,6 +173,20 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
                 {t("settings.portableMode")}
               </Badge>
             )}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-1 text-caption text-fg-muted">
+            <span>{t("settings.customForkNotice")}</span>
+            <button
+              type="button"
+              className="text-primary hover:underline cursor-pointer inline-flex items-center"
+              onClick={() =>
+                void settingsApi.openExternal(
+                  "https://github.com/ZhangJinHui0627/CCSWITCH",
+                )
+              }
+            >
+              ZhangJinHui0627/CCSWITCH
+            </button>
           </div>
         </div>
         <Button
