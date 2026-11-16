@@ -222,6 +222,9 @@ export function ProviderList({
       if (appId === "claude-desktop") {
         return (await providersApi.importClaudeDesktopFromClaude()) > 0;
       }
+      if (appId === "dsh") {
+        return (await providersApi.importDshFromLive()) > 0;
+      }
       return providersApi.importDefault(appId);
     },
     onSuccess: (imported) => {

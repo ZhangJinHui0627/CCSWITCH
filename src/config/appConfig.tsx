@@ -7,6 +7,8 @@ import {
   CodexIcon,
   GeminiIcon,
   OpenClawIcon,
+  ZCodeIcon,
+  DshIcon,
 } from "@/components/BrandIcons";
 import { ProviderIcon } from "@/components/ProviderIcon";
 
@@ -31,6 +33,8 @@ export const APP_IDS: AppId[] = [
   "kimi",
   "agy",
   "omp",
+  "zcode",
+  "dsh",
 ];
 
 export const DEFAULT_VISIBLE_APPS: VisibleApps = {
@@ -47,6 +51,8 @@ export const DEFAULT_VISIBLE_APPS: VisibleApps = {
   kimi: true,
   agy: true,
   omp: true,
+  zcode: true,
+  dsh: true,
 };
 
 /**
@@ -134,7 +140,7 @@ export function isStackAppId(appId: string): appId is StackAppId {
 
 export type AdditiveAppId = Extract<
   AppId,
-  "opencode" | "openclaw" | "hermes" | "pi" | "mcode" | "kimi" | "omp"
+  "opencode" | "openclaw" | "hermes" | "pi" | "mcode" | "kimi" | "omp" | "zcode" | "dsh"
 >;
 
 export const ADDITIVE_APP_IDS: AdditiveAppId[] = [
@@ -145,6 +151,8 @@ export const ADDITIVE_APP_IDS: AdditiveAppId[] = [
   "hermes",
   "pi",
   "omp",
+  "zcode",
+  "dsh",
 ];
 
 export function isAdditiveAppId(appId: string): appId is AdditiveAppId {
@@ -174,7 +182,10 @@ export function usesEditorView(appId: AppId): boolean {
 }
 
 /** Claude Desktop、OpenClaw 不由 CC Switch 管理 MCP；Pi 1.0 起内置 MCP（`~/.pi/agent/mcp.json`） */
-export type McpAppId = Exclude<AppId, "claude-desktop" | "openclaw">;
+export type McpAppId = Exclude<
+  AppId,
+  "claude-desktop" | "openclaw" | "zcode" | "dsh"
+>;
 export const MCP_APP_IDS: McpAppId[] = [
   "claude",
   "codex",
@@ -329,6 +340,22 @@ export const APP_ICON_MAP: Record<AppId, AppConfig> = {
       "bg-cyan-500/10 ring-1 ring-cyan-500/20 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400",
     badgeClass:
       "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20 border-0 gap-1.5",
+  },
+  zcode: {
+    label: "ZCode",
+    icon: <ZCodeIcon size={14} />,
+    activeClass:
+      "bg-violet-500/10 ring-1 ring-violet-500/20 hover:bg-violet-500/20 text-violet-600 dark:text-violet-400",
+    badgeClass:
+      "bg-violet-500/10 text-violet-700 dark:text-violet-300 hover:bg-violet-500/20 border-0 gap-1.5",
+  },
+  dsh: {
+    label: "DeepSeek Harness",
+    icon: <DshIcon size={14} />,
+    activeClass:
+      "bg-blue-500/10 ring-1 ring-blue-500/20 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400",
+    badgeClass:
+      "bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 border-0 gap-1.5",
   },
 };
 

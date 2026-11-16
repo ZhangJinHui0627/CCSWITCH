@@ -42,6 +42,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import type { AppId } from "@/lib/api";
 import { providersApi } from "@/lib/api/providers";
 import type { ToolInstallationReport } from "@/lib/api/settings";
@@ -107,17 +108,27 @@ const SOURCE_LABEL: Record<string, string> = {
   pip: "pip",
 };
 
-type Row = { kind: "tool"; tool: ToolName } | { kind: "desktop" };
+type Row =
+  | { kind: "tool"; tool: ToolName }
+  | { kind: "desktop" }
+  | { kind: "zcode" }
+  | { kind: "dsh" };
 
 const ROW_BY_APP = Object.fromEntries([
   ["claude-desktop", { kind: "desktop" }],
+  ["zcode", { kind: "zcode" }],
+  ["dsh", { kind: "dsh" }],
   ...TOOL_NAMES.map((tool) => [TOOL_APP_IDS[tool], { kind: "tool", tool }]),
 ]) as Record<AppId, Row>;
 
 type RowSection = { key: string; title: string; rows: Row[] };
 
-const rowKey = (row: Row): AppId =>
-  row.kind === "desktop" ? "claude-desktop" : TOOL_APP_IDS[row.tool];
+const rowKey = (row: Row): AppId => {
+  if (row.kind === "desktop") return "claude-desktop";
+  if (row.kind === "zcode") return "zcode";
+  if (row.kind === "dsh") return "dsh";
+  return TOOL_APP_IDS[row.tool];
+};
 
 // 只上下拖，且停在本组的列表框里：列表框裁掉超出的部分，拖出去整行会看不见
 const verticalDragModifiers: Modifier[] = [
@@ -182,12 +193,35 @@ export function AppsPage() {
     queryFn: () => providersApi.getClaudeDesktopStatus(),
     staleTime: 30_000,
   });
+  const { data: zcodeStatus, isPending: isZCodeStatusPending } = useQuery({
+    queryKey: ["zcode-status"],
+    queryFn: () =>
+      invoke<{ exists: boolean; path: string }>("get_config_status", {
+        app: "zcode",
+      }),
+    staleTime: 30_000,
+  });
+  const { data: dshStatus, isPending: isDshStatusPending } = useQuery({
+    queryKey: ["dsh-status"],
+    queryFn: () =>
+      invoke<{ exists: boolean; path: string }>("get_config_status", {
+        app: "dsh",
+      }),
+    staleTime: 30_000,
+  });
 
   // 按「已安装 / 未安装」分两组。Claude Desktop 没有命令可探，用后端按数据目录 / 应用包推断的结果。
   // 首次探测还没出结果时不分组，免得各行探完一个跳一个；之后重新检查时沿用上次结果，位置不动。
-  const rowInstalled = (row: Row): boolean | null => {
+  const rowInstalled = (row: Row | undefined): boolean | null => {
+    if (!row) return null;
     if (row.kind === "desktop") {
       return isDesktopStatusPending ? null : Boolean(desktopStatus?.installed);
+    }
+    if (row.kind === "zcode") {
+      return isZCodeStatusPending ? null : Boolean(zcodeStatus?.exists);
+    }
+    if (row.kind === "dsh") {
+      return isDshStatusPending ? null : Boolean(dshStatus?.exists);
     }
     const info = tools.toolVersionByName.get(row.tool);
     if (!info && tools.isLoadingTools) return null;
@@ -195,7 +229,9 @@ export function AppsPage() {
   };
   // 两组共用一份顺序（拖动后写进设置，侧栏也按它排），每组只是按装没装过滤
   const appOrder = orderAppIds(settings?.appOrder);
-  const orderedRows = appOrder.map((app) => ROW_BY_APP[app]);
+  const orderedRows = appOrder
+    .map((app) => ROW_BY_APP[app])
+    .filter((row): row is Row => Boolean(row));
   const rowStates = orderedRows.map((row) => ({
     row,
     installed: rowInstalled(row),
@@ -335,29 +371,78 @@ export function AppsPage() {
     );
   };
 
-  const renderRow = (row: Row) =>
-    row.kind === "desktop" ? (
-      <AppRow
-        key="claude-desktop"
-        app="claude-desktop"
-        name={
-          <span className="truncate">{APP_DISPLAY_NAME["claude-desktop"]}</span>
-        }
-        version={
-          <span className="inline-flex items-center gap-1 text-caption text-fg-2">
-            {desktopStatus?.supported === false
-              ? t("appsPage.desktopUnsupported")
-              : desktopStatus?.configured
+  const renderRow = (row: Row) => {
+    if (row.kind === "desktop") {
+      return (
+        <AppRow
+          key="claude-desktop"
+          app="claude-desktop"
+          name={
+            <span className="truncate">{APP_DISPLAY_NAME["claude-desktop"]}</span>
+          }
+          version={
+            <span className="inline-flex items-center gap-1 text-caption text-fg-2">
+              {desktopStatus?.supported === false
+                ? t("appsPage.desktopUnsupported")
+                : desktopStatus?.configured
+                  ? t("appsPage.desktopConnected")
+                  : t("appsPage.desktopNotConnected")}
+              <HelpTip title={APP_DISPLAY_NAME["claude-desktop"]} align="end">
+                {t("appsPage.desktopHelp")}
+              </HelpTip>
+            </span>
+          }
+          visibility={visibilitySwitch("claude-desktop")}
+        />
+      );
+    }
+    if (row.kind === "zcode") {
+      return (
+        <AppRow
+          key="zcode"
+          app="zcode"
+          name={<span className="truncate">{APP_DISPLAY_NAME["zcode"]}</span>}
+          version={
+            <span className="inline-flex items-center gap-1 text-caption text-fg-2">
+              {zcodeStatus?.exists
                 ? t("appsPage.desktopConnected")
                 : t("appsPage.desktopNotConnected")}
-            <HelpTip title={APP_DISPLAY_NAME["claude-desktop"]} align="end">
-              {t("appsPage.desktopHelp")}
-            </HelpTip>
-          </span>
-        }
-        visibility={visibilitySwitch("claude-desktop")}
-      />
-    ) : (
+              <HelpTip title={APP_DISPLAY_NAME["zcode"]} align="end">
+                {t(
+                  "appsPage.zcodeHelp",
+                  "ZCode 由其自身客户端或 CLI 管理；CC Switch 统计其用量与配置。",
+                )}
+              </HelpTip>
+            </span>
+          }
+          visibility={visibilitySwitch("zcode")}
+        />
+      );
+    }
+    if (row.kind === "dsh") {
+      return (
+        <AppRow
+          key="dsh"
+          app="dsh"
+          name={<span className="truncate">{APP_DISPLAY_NAME["dsh"]}</span>}
+          version={
+            <span className="inline-flex items-center gap-1 text-caption text-fg-2">
+              {dshStatus?.exists
+                ? t("appsPage.desktopConnected")
+                : t("appsPage.desktopNotConnected")}
+              <HelpTip title={APP_DISPLAY_NAME["dsh"]} align="end">
+                {t(
+                  "appsPage.dshHelp",
+                  "DeepSeek Harness 由其自身管理；CC Switch 统计其用量与配置。",
+                )}
+              </HelpTip>
+            </span>
+          }
+          visibility={visibilitySwitch("dsh")}
+        />
+      );
+    }
+    return (
       <ToolRow
         key={row.tool}
         tool={row.tool}
@@ -373,6 +458,7 @@ export function AppsPage() {
         visibility={visibilitySwitch(TOOL_APP_IDS[row.tool])}
       />
     );
+  };
 
   return (
     <>

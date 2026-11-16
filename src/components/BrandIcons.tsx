@@ -62,6 +62,78 @@ export function OpenClawIcon({ size = 16, className = "" }: IconProps) {
 }
 
 // Claude Desktop-style Skills scroll, based on the reference image.
+/** ZCode（Z.AI）品牌图标：深底圆角方块 + 渐变 Z。 */
+export function ZCodeIcon({ size = 16, className = "" }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      className={className}
+      style={{ flex: "none", lineHeight: 1 }}
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="zcode-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#5ad8e6" />
+          <stop offset=".5" stopColor="#7c6bff" />
+          <stop offset="1" stopColor="#b44dff" />
+        </linearGradient>
+      </defs>
+      <rect width="64" height="64" rx="14" fill="#0b0e14" />
+      <text
+        x="32"
+        y="44"
+        textAnchor="middle"
+        fontFamily="Arial, 'Segoe UI', sans-serif"
+        fontSize="38"
+        fontWeight="800"
+        fill="url(#zcode-g)"
+      >
+        Z
+      </text>
+    </svg>
+  );
+}
+
+/** DeepSeek Harness（DSH）品牌图标：科技蓝渐变底 + 极客造型。 */
+export function DshIcon({ size = 16, className = "" }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      className={className}
+      style={{ flex: "none", lineHeight: 1 }}
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="dsh-bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#0d1b2a" />
+          <stop offset="1" stopColor="#1b263b" />
+        </linearGradient>
+        <linearGradient id="dsh-text" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#4cc9f0" />
+          <stop offset="1" stopColor="#4361ee" />
+        </linearGradient>
+      </defs>
+      <rect width="64" height="64" rx="14" fill="url(#dsh-bg)" />
+      <text
+        x="32"
+        y="42"
+        textAnchor="middle"
+        fontFamily="system-ui, -apple-system, sans-serif"
+        fontSize="24"
+        fontWeight="800"
+        letterSpacing="-1"
+        fill="url(#dsh-text)"
+      >
+        DSH
+      </text>
+    </svg>
+  );
+}
+
 export function SkillsIcon({ size = 16, className = "" }: IconProps) {
   return (
     <svg
