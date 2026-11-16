@@ -2889,6 +2889,14 @@ fn strip_model_date_suffix(model_id: &str) -> Option<String> {
             return Some(base.to_string());
         }
     }
+    // 4 位 MMDD（如 -1017、-0731、-0813、-0919；通义千问、DeepSeek 等快照）。
+    if suffix.len() == 4 {
+        let month: u32 = suffix[0..2].parse().unwrap_or(0);
+        let day: u32 = suffix[2..4].parse().unwrap_or(0);
+        if (1..=12).contains(&month) && (1..=31).contains(&day) {
+            return Some(base.to_string());
+        }
+    }
     None
 }
 
@@ -5784,6 +5792,15 @@ mod tests {
         assert_eq!(
             strip_model_date_suffix("claude-3-5-sonnet-20241022").as_deref(),
             Some("claude-3-5-sonnet")
+        );
+        // 4 位 MMDD（快照版本）剥离。
+        assert_eq!(
+            strip_model_date_suffix("deepseek-v4.1-flash-1017").as_deref(),
+            Some("deepseek-v4.1-flash")
+        );
+        assert_eq!(
+            strip_model_date_suffix("qwen-turbo-0919").as_deref(),
+            Some("qwen-turbo")
         );
         // 月/日非法的 6 位尾巴（版本号等）不剥离，避免误伤。
         assert_eq!(strip_model_date_suffix("foo-bar-123456"), None); // 月=34
