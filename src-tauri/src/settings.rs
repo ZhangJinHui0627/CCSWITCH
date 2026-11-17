@@ -1374,7 +1374,12 @@ pub fn get_current_provider(app_type: &AppType) -> Option<String> {
         AppType::OpenClaw => settings.current_provider_openclaw.clone(),
         AppType::Hermes => settings.current_provider_hermes.clone(),
         AppType::Agy => settings.current_provider_agy.clone(),
-        AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Omp | AppType::Zcode | AppType::Dsh => None,
+        AppType::Pi
+        | AppType::Mcode
+        | AppType::Kimi
+        | AppType::Omp
+        | AppType::Zcode
+        | AppType::Dsh => None,
     }
 }
 
@@ -1394,7 +1399,12 @@ pub fn set_current_provider(app_type: &AppType, id: Option<&str>) -> Result<(), 
         AppType::OpenClaw => settings.current_provider_openclaw = id_owned.clone(),
         AppType::Hermes => settings.current_provider_hermes = id_owned.clone(),
         AppType::Agy => settings.current_provider_agy = id_owned.clone(),
-        AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Omp | AppType::Zcode | AppType::Dsh => {},
+        AppType::Pi
+        | AppType::Mcode
+        | AppType::Kimi
+        | AppType::Omp
+        | AppType::Zcode
+        | AppType::Dsh => {}
     })
 }
 

@@ -728,7 +728,7 @@ pub(crate) fn write_live_snapshot(app_type: &AppType, provider: &Provider) -> Re
             ));
         }
         // ZCode 和 DSH 供应商仅存于 CC Switch 库中，无 live 配置可写
-        AppType::Zcode | AppType::Dsh => {},
+        AppType::Zcode | AppType::Dsh => {}
     }
     Ok(())
 }

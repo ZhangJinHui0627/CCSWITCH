@@ -616,7 +616,13 @@ impl CommonConfigSnippets {
             AppType::OpenCode => self.opencode.as_ref(),
             AppType::OpenClaw => self.openclaw.as_ref(),
             AppType::Hermes => self.hermes.as_ref(),
-            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp | AppType::Zcode | AppType::Dsh => None,
+            AppType::Pi
+            | AppType::Mcode
+            | AppType::Kimi
+            | AppType::Agy
+            | AppType::Omp
+            | AppType::Zcode
+            | AppType::Dsh => None,
         }
     }
 
@@ -631,7 +637,13 @@ impl CommonConfigSnippets {
             AppType::OpenCode => self.opencode = snippet,
             AppType::OpenClaw => self.openclaw = snippet,
             AppType::Hermes => self.hermes = snippet,
-            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp | AppType::Zcode | AppType::Dsh => {},
+            AppType::Pi
+            | AppType::Mcode
+            | AppType::Kimi
+            | AppType::Agy
+            | AppType::Omp
+            | AppType::Zcode
+            | AppType::Dsh => {}
         }
     }
 }
@@ -958,9 +970,13 @@ impl MultiAppConfig {
             AppType::Hermes => &mut config.prompts.hermes.prompts,
             // Pi was added after prompts moved to SQLite. Keeping it out of
             // this legacy config avoids a second, unused prompt state.
-            AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp | AppType::Zcode | AppType::Dsh => {
-                return Ok(false)
-            }
+            AppType::Pi
+            | AppType::Mcode
+            | AppType::Kimi
+            | AppType::Agy
+            | AppType::Omp
+            | AppType::Zcode
+            | AppType::Dsh => return Ok(false),
         };
 
         prompts.insert(id, prompt);
@@ -1004,9 +1020,13 @@ impl MultiAppConfig {
                 AppType::OpenCode => &self.mcp.opencode.servers,
                 AppType::OpenClaw => continue, // OpenClaw MCP is still in development, skip
                 AppType::Hermes => continue,   // Hermes didn't exist in v3.6.x, skip
-                AppType::Pi | AppType::Mcode | AppType::Kimi | AppType::Agy | AppType::Omp | AppType::Zcode | AppType::Dsh => {
-                    continue
-                } // Pi didn't exist in v3.6.x, skip
+                AppType::Pi
+                | AppType::Mcode
+                | AppType::Kimi
+                | AppType::Agy
+                | AppType::Omp
+                | AppType::Zcode
+                | AppType::Dsh => continue, // Pi didn't exist in v3.6.x, skip
             };
 
             for (id, entry) in old_servers {

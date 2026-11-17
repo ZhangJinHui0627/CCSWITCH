@@ -11,9 +11,7 @@ use crate::database::{lock_conn, Database};
 use crate::error::AppError;
 use crate::proxy::usage::calculator::CostCalculator;
 use crate::proxy::usage::parser::TokenUsage;
-use crate::services::session_usage::{
-    metadata_modified_nanos, SessionSyncResult,
-};
+use crate::services::session_usage::{metadata_modified_nanos, SessionSyncResult};
 use crate::services::sql_helpers::INPUT_TOKEN_SEMANTICS_FRESH;
 use crate::services::usage_stats::find_model_pricing;
 use rusqlite::params;
@@ -119,8 +117,7 @@ fn sync_single_dsh_file(
         return Ok((0, 0));
     }
 
-    let file = File::open(file_path)
-        .map_err(|e| AppError::Config(format!("无法打开文件: {e}")))?;
+    let file = File::open(file_path).map_err(|e| AppError::Config(format!("无法打开文件: {e}")))?;
     let decoder = zstd::stream::read::Decoder::new(file)
         .map_err(|e| AppError::Config(format!("创建 zstd 解压器失败: {e}")))?;
     let reader = BufReader::new(decoder);
@@ -367,7 +364,11 @@ mod tests {
         let r = sync_dsh_usage(&db).unwrap();
         // 如果本机有 session 文件，导入数应大于 0
         if r.files_scanned > 0 {
-            assert!(r.imported > 0, "expected at least 1 imported row, got {}", r.imported);
+            assert!(
+                r.imported > 0,
+                "expected at least 1 imported row, got {}",
+                r.imported
+            );
             let r2 = sync_dsh_usage(&db).unwrap();
             assert_eq!(r2.imported, 0);
         }

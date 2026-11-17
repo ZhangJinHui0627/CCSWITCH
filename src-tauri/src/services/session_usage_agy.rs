@@ -72,7 +72,10 @@ fn proxied_conversations() -> HashSet<String> {
         return set;
     };
     let Ok(value) = serde_json::from_str::<Value>(&text) else {
-        log::warn!("[AGY-SYNC] 解析 dsh-agy-link 登记表失败: {}", path.display());
+        log::warn!(
+            "[AGY-SYNC] 解析 dsh-agy-link 登记表失败: {}",
+            path.display()
+        );
         return set;
     };
 
@@ -196,17 +199,15 @@ pub fn sync_agy_usage(db: &Database) -> Result<SessionSyncResult, AppError> {
 
         result.files_scanned += 1;
         match agy::records(transcript) {
-            Ok(rows) => {
-                match import_records(db, &session.session_id, &rows, Some(transcript)) {
-                    Ok((imported, skipped)) => {
-                        result.imported += imported;
-                        result.skipped += skipped;
-                    }
-                    Err(e) => result
-                        .errors
-                        .push(format!("Antigravity {}: {e}", session.session_id)),
+            Ok(rows) => match import_records(db, &session.session_id, &rows, Some(transcript)) {
+                Ok((imported, skipped)) => {
+                    result.imported += imported;
+                    result.skipped += skipped;
                 }
-            }
+                Err(e) => result
+                    .errors
+                    .push(format!("Antigravity {}: {e}", session.session_id)),
+            },
             Err(e) => result.errors.push(e),
         }
     }

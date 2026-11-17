@@ -16,7 +16,9 @@ pub fn sync_zcode_usage(db: &Database) -> Result<SessionSyncResult, AppError> {
 
     let source = rusqlite::Connection::open_with_flags(
         &db_path,
-        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_URI | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        OpenFlags::SQLITE_OPEN_READ_ONLY
+            | OpenFlags::SQLITE_OPEN_URI
+            | OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )
     .map_err(|e| AppError::Database(format!("Failed to open ZCode database: {e}")))?;
 
@@ -188,7 +190,15 @@ mod tests {
                 .unwrap();
             assert_eq!(
                 row,
-                ("zcode:req-1".into(), "GLM-5.3".into(), 1000, 200, 800, 200, "zcode".into())
+                (
+                    "zcode:req-1".into(),
+                    "GLM-5.3".into(),
+                    1000,
+                    200,
+                    800,
+                    200,
+                    "zcode".into()
+                )
             );
         }
 
@@ -211,7 +221,11 @@ mod tests {
         {
             let conn = db.conn.lock().unwrap();
             let count: i64 = conn
-                .query_row("SELECT COUNT(*) FROM proxy_request_logs WHERE app_type = 'zcode'", [], |r| r.get(0))
+                .query_row(
+                    "SELECT COUNT(*) FROM proxy_request_logs WHERE app_type = 'zcode'",
+                    [],
+                    |r| r.get(0),
+                )
                 .unwrap();
             assert_eq!(count, 2);
         }
@@ -229,7 +243,11 @@ mod tests {
 
         let db = Database::memory().unwrap();
         let r = sync_zcode_usage(&db).unwrap();
-        assert!(r.imported >= 400, "expected at least 400 imported rows, got {}", r.imported);
+        assert!(
+            r.imported >= 400,
+            "expected at least 400 imported rows, got {}",
+            r.imported
+        );
 
         // Incremental sync should import 0
         let r2 = sync_zcode_usage(&db).unwrap();

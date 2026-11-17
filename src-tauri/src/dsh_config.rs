@@ -17,7 +17,10 @@ pub(crate) fn get_dsh_dir() -> PathBuf {
 /// DSH 桌面端的配置文件路径（~/.dsh/profiles/desktop/cordis.patch.yml）。
 #[allow(dead_code)]
 pub(crate) fn dsh_settings_path() -> PathBuf {
-    get_dsh_dir().join("profiles").join("desktop").join("cordis.patch.yml")
+    get_dsh_dir()
+        .join("profiles")
+        .join("desktop")
+        .join("cordis.patch.yml")
 }
 
 /// DSH 桌面端可执行程序路径探测。
@@ -191,9 +194,7 @@ pub(crate) fn get_dsh_live_providers() -> Vec<DshLiveProvider> {
                             default_model.clone()
                         } else {
                             models_json.first().and_then(|m| {
-                                m.get("id")
-                                    .and_then(|v| v.as_str())
-                                    .map(|s| s.to_string())
+                                m.get("id").and_then(|v| v.as_str()).map(|s| s.to_string())
                             })
                         };
 

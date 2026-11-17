@@ -21,7 +21,6 @@ import { Badge } from "@/components/ui/badge";
 import { WhatsNewDialog } from "@/components/WhatsNewDialog";
 import { WHATS_NEW_ENTRIES, entriesUpTo } from "@/lib/whatsNew";
 import ccswitchLogo from "@/assets/icons/logo.svg";
-import { extractErrorMessage } from "@/utils/errorUtils";
 
 interface AboutSectionProps {
   isPortable: boolean;
@@ -53,7 +52,7 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
   const [isLoadingVersion, setIsLoadingVersion] = useState(
     () => appVersionCache === null,
   );
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloading] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [starPromptDismissed, setStarPromptDismissed] = useState(
     readStarPromptDismissed,
@@ -63,7 +62,7 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
     [version],
   );
 
-  const { hasUpdate, updateInfo, checkUpdate, resetDismiss, isChecking } =
+  const { hasUpdate, updateInfo, isChecking } =
     useUpdate();
 
   useEffect(() => {
