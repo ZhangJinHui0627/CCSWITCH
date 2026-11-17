@@ -1525,7 +1525,12 @@ pub fn import_dsh_providers_from_live(state: &AppState) -> Result<usize, AppErro
     let mut imported = 0;
     let mut updated = 0;
     let existing_ids = state.db.get_provider_ids("dsh")?;
-    let has_current = state.db.get_current_provider("dsh")?.is_some();
+    let has_current = crate::mode::current::provider_for(
+        &state.db,
+        &crate::app_config::AppType::Dsh,
+        crate::mode::current::Purpose::Direct,
+    )?
+    .is_some();
 
     for dsh_p in dsh_providers {
         let is_current = !has_current && (imported == 0 || dsh_p.is_default);
