@@ -2909,7 +2909,14 @@ fn strip_model_date_suffix(model_id: &str) -> Option<String> {
 /// - 分层路由：`-tiered`（Antigravity `gemini-3.8-flash-tiered`）
 fn strip_reasoning_effort_suffix(model_id: &str) -> Option<String> {
     for suffix in [
-        "-minimal", "-low", "-medium", "-high", "-xhigh", "-thinking", "-sg", "-tiered",
+        "-minimal",
+        "-low",
+        "-medium",
+        "-high",
+        "-xhigh",
+        "-thinking",
+        "-sg",
+        "-tiered",
     ] {
         if let Some(stripped) = model_id.strip_suffix(suffix) {
             if !stripped.is_empty() {
