@@ -2900,8 +2900,17 @@ fn strip_model_date_suffix(model_id: &str) -> Option<String> {
     None
 }
 
+/// 上游会按推理档位、思考模式、路由变体给同一个模型挂不同后缀。这里统一剥掉，
+/// 让它们回落到基名的定价行，而不是各自显示「未定价」。
+///
+/// - 推理档位：`-minimal` `-low` `-medium` `-high` `-xhigh`
+/// - 思考模式：`-thinking`（Anthropic `claude-sonnet-4.6-thinking`）
+/// - 区域部署：`-sg`（DeepSeek 新加坡节点 `deepseek-v4.1-flash-sg`）
+/// - 分层路由：`-tiered`（Antigravity `gemini-3.8-flash-tiered`）
 fn strip_reasoning_effort_suffix(model_id: &str) -> Option<String> {
-    for suffix in ["-minimal", "-low", "-medium", "-high", "-xhigh"] {
+    for suffix in [
+        "-minimal", "-low", "-medium", "-high", "-xhigh", "-thinking", "-sg", "-tiered",
+    ] {
         if let Some(stripped) = model_id.strip_suffix(suffix) {
             if !stripped.is_empty() {
                 return Some(stripped.to_string());
@@ -5998,6 +6007,41 @@ mod tests {
         // 测试不存在的模型
         let result = find_model_pricing_row(&conn, "unknown-model-123")?;
         assert!(result.is_none(), "不应该匹配不存在的模型");
+
+        Ok(())
+    }
+
+    /// 上游挂档位/模式/区域/路由后缀时，必须回落到基名的定价行，
+    /// 不能各自显示「未定价」。这几类后缀都是线上实际出现过的漏价案例。
+    #[test]
+    fn suffixed_model_variants_fall_back_to_base_pricing() -> Result<(), AppError> {
+        let db = Database::memory()?;
+        let conn = lock_conn!(db.conn);
+        conn.execute(
+            "INSERT OR REPLACE INTO model_pricing (
+                model_id, display_name, input_cost_per_million, output_cost_per_million,
+                cache_read_cost_per_million, cache_creation_cost_per_million
+            ) VALUES ('claude-sonnet-4-6', 'Claude Sonnet 4.6', '3', '15', '0.30', '3.75')",
+            [],
+        )?;
+
+        for variant in [
+            "claude-sonnet-4-6-high",     // 推理档位
+            "claude-sonnet-4-6-thinking", // 思考模式
+        ] {
+            let row = find_model_pricing_row(&conn, variant)?;
+            assert!(row.is_some(), "{variant} 应回落到 claude-sonnet-4-6 定价");
+            let (input, ..) = row.unwrap();
+            assert_eq!(input, "3", "{variant} 输入价应继承基名");
+        }
+
+        // 点号 + 思考后缀（线上 claude-sonnet-4.6-thinking 的实际形态）：
+        // 先经 claude 点号→连字符归一，再剥 -thinking 命中基名
+        let row = find_model_pricing_row(&conn, "claude-sonnet-4.6-thinking")?;
+        assert!(
+            row.is_some(),
+            "claude-sonnet-4.6-thinking 应经点号转换 + 剥后缀命中 claude-sonnet-4-6"
+        );
 
         Ok(())
     }
