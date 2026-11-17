@@ -218,9 +218,12 @@ fn sync_single_dsh_file(
                     .and_then(|v| v.as_str())
             })
             .unwrap_or("unknown");
+        // 混元渠道别名统一归一化到短名（定价表与 UI 都以短名为准）。
         let model = match model {
-            "hy4free" | "hy4std" | "hy4" | "hunyuan-hy4" => "Hunyuan Hy4",
-            "hy3" | "hunyuan-hy3" => "Hunyuan Hy3",
+            "Hunyuan Hy4" | "hy4free" | "hy4std" | "hunyuan-hy4" => "hy4",
+            "Hunyuan Hy3" | "hunyuan-hy3" => "hy3",
+            // Hy4 Flash：腾讯 2026-11-16 发布，官方 CNY 0.5/2/0.02（¥7.14 → $0.07/0.28/0.0028）
+            "hy4flash-free" | "hy4-flash" | "hy4flash_free" => "hy4flash",
             other => other,
         };
 
