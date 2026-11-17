@@ -378,7 +378,9 @@ export function AppsPage() {
           key="claude-desktop"
           app="claude-desktop"
           name={
-            <span className="truncate">{APP_DISPLAY_NAME["claude-desktop"]}</span>
+            <span className="truncate">
+              {APP_DISPLAY_NAME["claude-desktop"]}
+            </span>
           }
           version={
             <span className="inline-flex items-center gap-1 text-caption text-fg-2">

@@ -140,7 +140,15 @@ export function isStackAppId(appId: string): appId is StackAppId {
 
 export type AdditiveAppId = Extract<
   AppId,
-  "opencode" | "openclaw" | "hermes" | "pi" | "mcode" | "kimi" | "omp" | "zcode" | "dsh"
+  | "opencode"
+  | "openclaw"
+  | "hermes"
+  | "pi"
+  | "mcode"
+  | "kimi"
+  | "omp"
+  | "zcode"
+  | "dsh"
 >;
 
 export const ADDITIVE_APP_IDS: AdditiveAppId[] = [

@@ -62,8 +62,7 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
     [version],
   );
 
-  const { hasUpdate, updateInfo, isChecking } =
-    useUpdate();
+  const { hasUpdate, updateInfo, isChecking } = useUpdate();
 
   useEffect(() => {
     let active = true;
