@@ -687,7 +687,11 @@ describe("AppsPage concurrent CLI upgrades", () => {
       configured: false,
     };
     await renderApps();
-    expect(rowApps("appsPage.sectionNotInstalled")).toEqual(["claude-desktop"]);
+    expect(rowApps("appsPage.sectionNotInstalled")).toEqual([
+      "claude-desktop",
+      "zcode",
+      "dsh",
+    ]);
   });
 
   it("orders rows by the saved app order within each section", async () => {
@@ -717,13 +721,15 @@ describe("AppsPage concurrent CLI upgrades", () => {
     expect(rowApps("appsPage.sectionNotInstalled")).toEqual([
       "hermes",
       "codex",
+      "zcode",
+      "dsh",
     ]);
     // 只有已安装的能拖
     expect(
       within(
         screen.getByRole("region", { name: "appsPage.sectionInstalled" }),
       ).getAllByRole("button", { name: "appsPage.dragHandle" }),
-    ).toHaveLength(APP_IDS.length - 2);
+    ).toHaveLength(APP_IDS.length - 4);
     expect(
       within(
         screen.getByRole("region", { name: "appsPage.sectionNotInstalled" }),

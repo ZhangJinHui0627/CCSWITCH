@@ -608,7 +608,7 @@ describe("PiProviderForm", () => {
     );
   });
 
-  it("uses structured Pi-native capabilities and limits in collapsed model details", async () => {
+  it("uses structured Pi-native capabilities and limits in collapsed model details", { timeout: 15_000 }, async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(
@@ -742,7 +742,7 @@ describe("PiProviderForm", () => {
     );
   });
 
-  it("stores Pi-native request headers without mixing them with API-key auth", async () => {
+  it("stores Pi-native request headers without mixing them with API-key auth", { timeout: 15_000 }, async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(

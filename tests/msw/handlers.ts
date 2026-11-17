@@ -558,6 +558,13 @@ export const handlers = [
       });
     },
   ),
+  http.post(`${TAURI_ENDPOINT}/get_config_status`, async ({ request }) => {
+    const { app } = await withJson<{ app: string }>(request);
+    // zcode / dsh 目前没有独立的配置目录探测，测试中统一返回“未安装”以保持分组逻辑稳定
+    void app;
+    return success({ exists: false, path: "" });
+  }),
+
   http.post(`${TAURI_ENDPOINT}/get_claude_desktop_status`, () =>
     success({
       supported: true,
