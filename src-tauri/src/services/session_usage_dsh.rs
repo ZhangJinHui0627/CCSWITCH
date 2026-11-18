@@ -432,12 +432,11 @@ mod tests {
         assert_eq!(imported, 1);
 
         let conn = lock_conn!(db.conn);
-        let stored: String = conn
-            .query_row(
-                "SELECT model FROM proxy_request_logs WHERE request_id='dsh:msg-effort-1'",
-                [],
-                |r| r.get(0),
-            )?;
+        let stored: String = conn.query_row(
+            "SELECT model FROM proxy_request_logs WHERE request_id='dsh:msg-effort-1'",
+            [],
+            |r| r.get(0),
+        )?;
         assert_eq!(stored, "gemini-3.8-flash-high", "思考强度后缀应被拼接");
         Ok(())
     }
