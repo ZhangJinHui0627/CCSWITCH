@@ -132,6 +132,10 @@ fn sync_single_dsh_file(
     let mut imported = 0u32;
     let mut skipped = 0u32;
     let mut processed_records = 0i64;
+    // DSH 把思考强度写在 model/selection 与 request/header 事件里，
+    // assistant/message 的 usage.model 是裸名。逐行扫描时维护「最近一次 effort」，
+    // 供 assistant/message 拼回后缀（如 gemini-3.8-flash-high）。
+    let mut current_effort: Option<String> = None;
 
     let mut conn = lock_conn!(db.conn);
     let tx = conn.transaction()?;
@@ -153,6 +157,38 @@ fn sync_single_dsh_file(
             Ok(v) => v,
             Err(_) => continue,
         };
+
+        // 维护思考强度：model/selection 与 request/header 都携带 reasoningEffort。
+        // request/header 精确到单次请求，优先级更高；model/selection 是会话级兜底。
+        match val.get("type").and_then(|v| v.as_str()) {
+            Some("model/selection") => {
+                if let Some(effort) = val
+                    .get("data")
+                    .and_then(|d| d.get("reasoningEffort"))
+                    .and_then(|v| v.as_str())
+                {
+                    if !effort.is_empty() {
+                        current_effort = Some(effort.to_string());
+                    }
+                }
+                continue;
+            }
+            Some("request/header") => {
+                if let Some(effort) = val
+                    .get("data")
+                    .and_then(|d| d.get("header"))
+                    .and_then(|h| h.get("config"))
+                    .and_then(|c| c.get("reasoningEffort"))
+                    .and_then(|v| v.as_str())
+                {
+                    if !effort.is_empty() {
+                        current_effort = Some(effort.to_string());
+                    }
+                }
+                continue;
+            }
+            _ => {}
+        }
 
         if val.get("type").and_then(|v| v.as_str()) != Some("assistant/message") {
             continue;
@@ -227,6 +263,25 @@ fn sync_single_dsh_file(
             other => other,
         };
 
+        // 拼接思考强度后缀：gemini-3.8-flash + high → gemini-3.8-flash-high。
+        // 仅当裸名尚未带 -low/-medium/-high/-xhigh/-max 时追加，避免重复。
+        // off 与 minimal 不拼（它们不是 gemini 的强度档），且查价层已有剥后缀兜底。
+        let model = match current_effort.as_deref() {
+            Some(effort @ ("low" | "medium" | "high" | "xhigh" | "max")) => {
+                if model.ends_with("-low")
+                    || model.ends_with("-medium")
+                    || model.ends_with("-high")
+                    || model.ends_with("-xhigh")
+                    || model.ends_with("-max")
+                {
+                    model.to_string()
+                } else {
+                    format!("{model}-{effort}")
+                }
+            }
+            _ => model.to_string(),
+        };
+
         let time_ms = val.get("time").and_then(|v| v.as_i64()).unwrap_or(0);
         let created_at = if time_ms > 0 {
             time_ms / 1000
@@ -240,13 +295,13 @@ fn sync_single_dsh_file(
             cache_read_tokens: cache_read,
             cache_creation_tokens: 0,
             cache_creation_1h_tokens: 0,
-            model: Some(model.to_string()),
+            model: Some(model.clone()),
             message_id: Some(message_id.clone()),
         };
 
         // 分项与合计一起写：详情面板按分项展示，只写 total 会让"输入/输出成本"显示 0。
         let (input_cost, output_cost, cache_read_cost, cache_creation_cost, cost) =
-            match find_model_pricing(&tx, model) {
+            match find_model_pricing(&tx, &model) {
                 Some(pricing) => {
                     let c = CostCalculator::calculate_for_app(
                         "dsh",
@@ -354,6 +409,37 @@ mod tests {
         let (imported2, skipped2) = sync_single_dsh_file(&db, &session_file, modified).unwrap();
         assert_eq!(imported2, 0);
         assert_eq!(skipped2, 0);
+    }
+
+    #[test]
+    fn dsh_sync_appends_reasoning_effort_suffix() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let session_dir = temp_dir.path().join("sessions").join("test-effort-session");
+        fs::create_dir_all(&session_dir).unwrap();
+        let session_file = session_dir.join("session.v4.jsonl.zstd");
+
+        // 先 model/selection 置 high，再 assistant/message 用裸名 gemini-3.8-flash
+        let lines = [
+            r#"{"type":"model/selection","seq":1,"time":1740567196000,"data":{"provider":"antigravity","model":"gemini-3.8-flash","reasoningEffort":"high"}}"#,
+            r#"{"time":1740567197000,"type":"assistant/message","data":{"message":{"id":"msg-effort-1","model":"gemini-3.8-flash","role":"assistant"},"source":{"provider":"antigravity","model":"gemini-3.8-flash"},"usage":{"inputTokens":10,"outputTokens":2,"cacheReadTokens":0}}}"#,
+        ];
+        let joined = format!("{}\n", lines.join("\n"));
+        let compressed = zstd::stream::encode_all(joined.as_bytes(), 3).unwrap();
+        fs::write(&session_file, compressed).unwrap();
+
+        let db = Database::memory().unwrap();
+        let (imported, _) = sync_single_dsh_file(&db, &session_file, 0).unwrap();
+        assert_eq!(imported, 1);
+
+        let conn = lock_conn!(db.conn);
+        let stored: String = conn
+            .query_row(
+                "SELECT model FROM proxy_request_logs WHERE request_id='dsh:msg-effort-1'",
+                [],
+                |r| r.get(0),
+            )?;
+        assert_eq!(stored, "gemini-3.8-flash-high", "思考强度后缀应被拼接");
+        Ok(())
     }
 
     #[test]
