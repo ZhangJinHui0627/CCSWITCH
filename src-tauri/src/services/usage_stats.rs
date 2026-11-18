@@ -2914,6 +2914,7 @@ fn strip_reasoning_effort_suffix(model_id: &str) -> Option<String> {
         "-medium",
         "-high",
         "-xhigh",
+        "-max",
         "-thinking",
         "-sg",
         "-tiered",
@@ -6035,6 +6036,7 @@ mod tests {
         for variant in [
             "claude-sonnet-4-6-high",     // 推理档位
             "claude-sonnet-4-6-thinking", // 思考模式
+            "claude-sonnet-4-6-max",      // 最高推理档位
         ] {
             let row = find_model_pricing_row(&conn, variant)?;
             assert!(row.is_some(), "{variant} 应回落到 claude-sonnet-4-6 定价");
