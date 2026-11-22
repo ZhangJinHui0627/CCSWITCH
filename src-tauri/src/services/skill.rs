@@ -3999,8 +3999,7 @@ impl SkillService {
             let Some(safe_path) = file.enclosed_name() else {
                 log::warn!(
                     "跳过不安全的压缩包条目: {}",
-                    file.name()
-                        .unwrap_or_else(|_| std::borrow::Cow::Borrowed("?"))
+                    file.name().unwrap_or(std::borrow::Cow::Borrowed("?"))
                 );
                 continue;
             };
@@ -4021,8 +4020,7 @@ impl SkillService {
             {
                 log::warn!(
                     "跳过越界的压缩包条目: {}",
-                    file.name()
-                        .unwrap_or_else(|_| std::borrow::Cow::Borrowed("?"))
+                    file.name().unwrap_or(std::borrow::Cow::Borrowed("?"))
                 );
                 continue;
             }
@@ -4037,8 +4035,7 @@ impl SkillService {
                 let Some(target) = Self::read_symlink_target(&mut file, &mut total_bytes)? else {
                     log::warn!(
                         "跳过目标不合法的 symlink 条目: {}",
-                        file.name()
-                            .unwrap_or_else(|_| std::borrow::Cow::Borrowed("?"))
+                        file.name().unwrap_or(std::borrow::Cow::Borrowed("?"))
                     );
                     continue;
                 };
@@ -4595,8 +4592,7 @@ impl SkillService {
             {
                 log::warn!(
                     "跳过越界的压缩包条目: {}",
-                    file.name()
-                        .unwrap_or_else(|_| std::borrow::Cow::Borrowed("?"))
+                    file.name().unwrap_or(std::borrow::Cow::Borrowed("?"))
                 );
                 continue;
             }
@@ -4607,8 +4603,7 @@ impl SkillService {
                 let Some(target) = Self::read_symlink_target(&mut file, &mut total_bytes)? else {
                     log::warn!(
                         "跳过目标不合法的 symlink 条目: {}",
-                        file.name()
-                            .unwrap_or_else(|_| std::borrow::Cow::Borrowed("?"))
+                        file.name().unwrap_or(std::borrow::Cow::Borrowed("?"))
                     );
                     continue;
                 };
