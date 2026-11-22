@@ -1280,12 +1280,13 @@ fn model_pricing_seed_includes_glm_5_3_flash() {
         )
         .expect("query GLM-5.3-Flash price");
 
+    // 2026-11-21 智谱官方定价页核实（docs.bigmodel.cn，CNY 0.8/2.8/0.23 按 7.14 折算）
     assert_eq!(
         price,
         (
-            "0.15".to_string(),
-            "0.50".to_string(),
-            "0.03".to_string(),
+            "0.1120".to_string(),
+            "0.3922".to_string(),
+            "0.0322".to_string(),
             "0".to_string(),
         )
     );
