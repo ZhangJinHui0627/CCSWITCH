@@ -3,6 +3,7 @@
 //! Identities (`/me`: user id, nickname, avatar) are cached per provider id in
 //! `kimi_accounts.json` (0600, device-local, never cloud-synced). The cache only
 //! labels accounts; Kimi's config and credential files stay the source of truth.
+use crate::hex_encode;
 use std::{
     collections::BTreeMap,
     fs,
@@ -127,14 +128,14 @@ pub(super) fn account_suffix(region: KimiRegion, user_id: &str) -> String {
         KimiRegion::Global => "global",
     };
     let digest = Sha256::digest(format!("{region}:{user_id}").as_bytes());
-    format!("{digest:x}")[..8].to_string()
+    hex_encode(&digest)[..8].to_string()
 }
 
 pub(super) fn token_marker(credential: &Value) -> Option<String> {
     let refresh = credential["refresh_token"]
         .as_str()
         .filter(|s| !s.is_empty())?;
-    Some(format!("{:x}", Sha256::digest(refresh.as_bytes()))[..16].to_string())
+    Some(hex_encode(&Sha256::digest(refresh.as_bytes()))[..16].to_string())
 }
 
 fn string_field(payload: &Value, key: &str) -> Option<String> {

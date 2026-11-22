@@ -2422,6 +2422,17 @@ fn relaunch_macos_bundle(env: &tauri::Env) {
     }
 }
 
+/// generic-array 0.10 泛型迁移后 `Array<u8, N>` 不再实现 `LowerHex`，
+/// 哈希指纹统一先转 bytes 再手工编码。
+pub(crate) fn hex_encode(bytes: &[u8]) -> String {
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
+        use std::fmt::Write as _;
+        let _ = write!(s, "{b:02x}");
+    }
+    s
+}
+
 #[cfg(test)]
 mod tests {
     use super::{

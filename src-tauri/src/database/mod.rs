@@ -81,8 +81,8 @@ pub struct Database {
     pub(crate) log_count_cache: Mutex<Option<crate::services::usage_stats::LogCountCache>>,
 }
 
-fn register_db_change_hook(conn: &Connection) {
-    conn.update_hook(Some(
+fn register_db_change_hook(conn: &mut Connection) {
+    let _ = conn.update_hook(Some(
         |action: Action, _database: &str, table: &str, _row_id: i64| match action {
             Action::SQLITE_INSERT | Action::SQLITE_UPDATE | Action::SQLITE_DELETE => {
                 crate::services::webdav_auto_sync::notify_db_changed(table);
@@ -106,7 +106,7 @@ impl Database {
             std::fs::create_dir_all(parent).map_err(|e| AppError::io(parent, e))?;
         }
 
-        let conn = Connection::open(&db_path).map_err(|e| AppError::Database(e.to_string()))?;
+        let mut conn = Connection::open(&db_path).map_err(|e| AppError::Database(e.to_string()))?;
 
         // 启用外键约束
         conn.execute("PRAGMA foreign_keys = ON;", [])
@@ -117,7 +117,7 @@ impl Database {
             conn.execute("PRAGMA auto_vacuum = INCREMENTAL;", [])
                 .map_err(|e| AppError::Database(e.to_string()))?;
         }
-        register_db_change_hook(&conn);
+        register_db_change_hook(&mut conn);
 
         let db = Self {
             conn: Mutex::new(conn),
@@ -185,14 +185,15 @@ impl Database {
 
     /// 创建内存数据库（用于测试）
     pub fn memory() -> Result<Self, AppError> {
-        let conn = Connection::open_in_memory().map_err(|e| AppError::Database(e.to_string()))?;
+        let mut conn =
+            Connection::open_in_memory().map_err(|e| AppError::Database(e.to_string()))?;
 
         // 启用外键约束
         conn.execute("PRAGMA foreign_keys = ON;", [])
             .map_err(|e| AppError::Database(e.to_string()))?;
         conn.execute("PRAGMA auto_vacuum = INCREMENTAL;", [])
             .map_err(|e| AppError::Database(e.to_string()))?;
-        register_db_change_hook(&conn);
+        register_db_change_hook(&mut conn);
 
         let db = Self {
             conn: Mutex::new(conn),

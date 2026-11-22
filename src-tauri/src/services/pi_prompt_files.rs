@@ -2,6 +2,7 @@
 
 use crate::config::atomic_write;
 use crate::error::AppError;
+use crate::hex_encode;
 use crate::pi_config::get_pi_agent_dir;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -337,7 +338,7 @@ fn validate_content_size(content: &str, label: &str) -> Result<(), AppError> {
 }
 
 fn revision(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex_encode(&Sha256::digest(bytes))
 }
 
 fn template_path(dir: &Path, slug: &str) -> PathBuf {

@@ -1,6 +1,7 @@
 //! Import Kimi Code's committed request usage. Tokens are already normalized to fresh input.
 use crate::database::{lock_conn, Database};
 use crate::error::AppError;
+use crate::hex_encode;
 use crate::kimi_session::{timestamp_ms, RequestIndex};
 use crate::proxy::usage::{calculator::CostCalculator, parser::TokenUsage};
 use crate::services::{
@@ -19,11 +20,9 @@ use std::{
     io::{BufRead, BufReader},
     path::Path,
 };
-
 pub fn sync_kimi_usage(db: &Database) -> Result<SessionSyncResult, AppError> {
     sync_sessions(db, &crate::kimi_config::data_dir().join("sessions"))
 }
-
 fn sync_sessions(db: &Database, root: &Path) -> Result<SessionSyncResult, AppError> {
     let mut result = SessionSyncResult::default();
     let cursors = load_sync_cursors(db)?;
@@ -75,7 +74,6 @@ fn sync_sessions(db: &Database, root: &Path) -> Result<SessionSyncResult, AppErr
     }
     Ok(result)
 }
-
 fn sync_file(
     db: &Database,
     path: &Path,
@@ -146,8 +144,8 @@ fn sync_file(
                 continue;
             };
             let meta = serde_json::json!({
-                "messageId": event["messageId"],
-                "model": {"provider": "subagent"},
+            "messageId": event["messageId"],
+            "model": {"provider": "subagent"},
             });
             (meta, usage)
         };
@@ -176,7 +174,7 @@ fn sync_file(
             .and_then(Value::as_str)
             .filter(|id| !id.is_empty())
             .map(str::to_owned)
-            .unwrap_or_else(|| format!("{:x}", Sha256::digest(record.to_string().as_bytes())));
+            .unwrap_or_else(|| hex_encode(&Sha256::digest(record.to_string().as_bytes())));
         let provider = meta
             .pointer("/model/provider")
             .and_then(Value::as_str)
@@ -196,30 +194,29 @@ fn sync_file(
         let first_token = info.and_then(|info| info.first_token_ms);
         // Permanent receipts prevent re-import after wire rewrites, forks, or log pruning.
         if tx.execute("INSERT OR IGNORE INTO session_usage_dedup (data_source, request_id, semantic_id, has_entry_id) VALUES ('kimi_session', ?1, ?1, 1)", [&request])? == 0 {
-            // As with Claude imports, enrichment counts as changed data so the normal
-            // usage-log-recorded notification refreshes open tables and detail panels.
-            if refresh_existing(&tx, &request, model, &usage, latency, first_token)? {
-                result.imported += 1;
-            } else {
-                result.skipped += 1;
-            }
-            continue;
-        }
+// As with Claude imports, enrichment counts as changed data so the normal
+// usage-log-recorded notification refreshes open tables and detail panels.
+if refresh_existing(&tx, &request, model, &usage, latency, first_token)? {
+result.imported += 1;
+} else {
+result.skipped += 1;
+}
+continue;
+}
         let amounts = costs(&tx, model, &usage, Decimal::ONE);
         tx.execute("INSERT OR IGNORE INTO proxy_request_logs (
-            request_id, provider_id, app_type, model, request_model, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens,
-            input_cost_usd, output_cost_usd, cache_read_cost_usd, cache_creation_cost_usd, total_cost_usd,
-            latency_ms, first_token_ms, status_code, session_id, provider_type, is_streaming, cost_multiplier, created_at, data_source, input_token_semantics
-        ) VALUES (?1, '_kimi_session', 'kimi', ?2, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?15, ?16, 200, ?12, 'kimi_session', 1, '1', ?13, 'kimi_session', ?14)",
-            rusqlite::params![request, model, usage.input_tokens, usage.output_tokens, usage.cache_read_tokens, usage.cache_creation_tokens,
-                amounts[0], amounts[1], amounts[2], amounts[3], amounts[4], session, created/1000, INPUT_TOKEN_SEMANTICS_FRESH, latency, first_token])?;
+request_id, provider_id, app_type, model, request_model, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens,
+input_cost_usd, output_cost_usd, cache_read_cost_usd, cache_creation_cost_usd, total_cost_usd,
+latency_ms, first_token_ms, status_code, session_id, provider_type, is_streaming, cost_multiplier, created_at, data_source, input_token_semantics
+) VALUES (?1, '_kimi_session', 'kimi', ?2, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?15, ?16, 200, ?12, 'kimi_session', 1, '1', ?13, 'kimi_session', ?14)",
+rusqlite::params![request, model, usage.input_tokens, usage.output_tokens, usage.cache_read_tokens, usage.cache_creation_tokens,
+amounts[0], amounts[1], amounts[2], amounts[3], amounts[4], session, created/1000, INPUT_TOKEN_SEMANTICS_FRESH, latency, first_token])?;
         result.imported += 1;
     }
     update_sync_state_on_conn(&tx, key, modified, bytes)?;
     tx.commit()?;
     Ok(result)
 }
-
 fn costs(
     conn: &rusqlite::Connection,
     model: &str,
@@ -240,7 +237,6 @@ fn costs(
         .unwrap_or([Decimal::ZERO; 5])
         .map(|value| value.to_string())
 }
-
 /// Enrich retained details only. A receipt without a detail row belongs to pruned history;
 /// recreating it would count the request again on top of its daily rollup.
 fn refresh_existing(
@@ -254,7 +250,7 @@ fn refresh_existing(
     let stored: Option<(String, String, i64, Option<i64>)> = conn
         .query_row(
             "SELECT model, cost_multiplier, latency_ms, first_token_ms FROM proxy_request_logs
-         WHERE request_id = ?1 AND app_type = 'kimi' AND data_source = 'kimi_session'",
+WHERE request_id = ?1 AND app_type = 'kimi' AND data_source = 'kimi_session'",
             [request],
             |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
         )
@@ -282,9 +278,9 @@ fn refresh_existing(
         );
         conn.execute(
             "UPDATE proxy_request_logs SET model = ?2, request_model = ?2,
-             input_cost_usd = ?3, output_cost_usd = ?4, cache_read_cost_usd = ?5,
-             cache_creation_cost_usd = ?6, total_cost_usd = ?7
-             WHERE request_id = ?1 AND app_type = 'kimi' AND data_source = 'kimi_session'",
+input_cost_usd = ?3, output_cost_usd = ?4, cache_read_cost_usd = ?5,
+cache_creation_cost_usd = ?6, total_cost_usd = ?7
+WHERE request_id = ?1 AND app_type = 'kimi' AND data_source = 'kimi_session'",
             rusqlite::params![
                 request, model, amounts[0], amounts[1], amounts[2], amounts[3], amounts[4]
             ],
@@ -292,25 +288,22 @@ fn refresh_existing(
     }
     conn.execute(
         "UPDATE proxy_request_logs SET latency_ms = ?2, first_token_ms = ?3
-         WHERE request_id = ?1 AND app_type = 'kimi' AND data_source = 'kimi_session'",
+WHERE request_id = ?1 AND app_type = 'kimi' AND data_source = 'kimi_session'",
         rusqlite::params![request, latency, first_token],
     )?;
     Ok(true)
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
-
     fn message(id: &str, time: i64, output: u64) -> Value {
         json!({"type":"agent.message.appended","time":time,"message":{
-            "message":{"role":"assistant","content":[{"type":"text","text":"Done"}]},
-            "meta":{"messageId":id,"model":{"provider":"agent-loop","model":"agent-loop"},
-                "usage":{"inputOther":10,"output":output,"inputCacheRead":30,"inputCacheCreation":40}}
+        "message":{"role":"assistant","content":[{"type":"text","text":"Done"}]},
+        "meta":{"messageId":id,"model":{"provider":"agent-loop","model":"agent-loop"},
+        "usage":{"inputOther":10,"output":output,"inputCacheRead":30,"inputCacheCreation":40}}
         }})
     }
-
     fn request(
         id: &str,
         model: &str,
@@ -329,7 +322,6 @@ mod tests {
             json!({"type":"context.append_loop_event","time":start+first+stream+200_000,"event":{"type":"step.end","uuid":id,"messageId":id,"llmFirstTokenLatencyMs":first,"llmStreamDurationMs":stream}}),
         ]
     }
-
     fn write_records(path: &Path, records: &[Value]) {
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(
@@ -341,7 +333,6 @@ mod tests {
         )
         .unwrap();
     }
-
     #[test]
     fn kimi_usage_resolves_actual_models_and_timing_for_detail_and_aggregate_stats() {
         let db = Database::memory().unwrap();
@@ -410,7 +401,6 @@ mod tests {
             .iter()
             .all(|model| model.model != "agent-loop" && model.est_speed_output_tokens > 0));
     }
-
     #[test]
     fn kimi_usage_enriches_details_when_step_end_arrives_on_next_sync() {
         let db = Database::memory().unwrap();
@@ -477,7 +467,6 @@ mod tests {
             .unwrap();
         assert_eq!(preserved, row);
     }
-
     #[test]
     fn kimi_usage_normalizes_tokens_and_does_not_reimport_pruned_or_forked_history() {
         let db = Database::memory().unwrap();
@@ -509,7 +498,6 @@ mod tests {
             0
         );
     }
-
     fn subagent_step(agent: &str, id: &str, model: &str, start: i64, output: u64) -> Vec<Value> {
         let usage =
             json!({"inputOther":10,"output":output,"inputCacheRead":30,"inputCacheCreation":0});
@@ -520,21 +508,20 @@ mod tests {
             json!({"type":"context.append_loop_event","time":start+1_000,"event":{"type":"step.end","uuid":id,"turnId":"0","step":1,"usage":usage,"messageId":id,"llmFirstTokenLatencyMs":200,"llmStreamDurationMs":800}}),
         ]
     }
-
     #[test]
     fn kimi_usage_imports_subagent_wires_once() {
         let db = Database::memory().unwrap();
         let root = tempfile::tempdir().unwrap();
         let session = root.path().join("wd_project/session_one/agents");
         write_records(
-            &session.join("main/wire.jsonl"),
-            &[
-                request("main-step", "main-model", 1_700_000_000_000, 1_000, 1_000, 50),
-                // The parent only records lifecycle events for its subagents.
-                vec![json!({"type":"subagent.spawned","subagentId":"agent-0","time":1_700_000_001_000i64})],
-            ]
-            .concat(),
-        );
+&session.join("main/wire.jsonl"),
+&[
+request("main-step", "main-model", 1_700_000_000_000, 1_000, 1_000, 50),
+// The parent only records lifecycle events for its subagents.
+vec![json!({"type":"subagent.spawned","subagentId":"agent-0","time":1_700_000_001_000i64})],
+]
+.concat(),
+);
         let mut child = vec![
             json!({"type":"agent.message.appended","time":1_700_000_001_000i64,"message":{"message":{"role":"user","content":[]},"meta":{}}}),
         ];
@@ -557,14 +544,13 @@ mod tests {
             json!({"type":"llm.request","agentId":"agent-1","kind":"loop","model":"other-model"}),
         );
         write_records(&session.join("agent-0/wire.jsonl"), &child);
-
         let result = sync_sessions(&db, root.path()).unwrap();
         assert_eq!((result.files_scanned, result.imported), (2, 3));
         {
             let conn = db.conn.lock().unwrap();
             let mut stmt = conn
-                .prepare("SELECT model, output_tokens, latency_ms, session_id FROM proxy_request_logs ORDER BY created_at, output_tokens")
-                .unwrap();
+.prepare("SELECT model, output_tokens, latency_ms, session_id FROM proxy_request_logs ORDER BY created_at, output_tokens")
+.unwrap();
             let rows = stmt
                 .query_map([], |row| {
                     Ok((
@@ -602,7 +588,6 @@ mod tests {
             0
         );
     }
-
     #[test]
     fn kimi_usage_retries_incomplete_tail() {
         let db = Database::memory().unwrap();
