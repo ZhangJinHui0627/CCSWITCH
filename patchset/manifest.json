@@ -1,0 +1,419 @@
+{
+  "name": "cc-switch-dsh-zcode",
+  "description": "CC Switch 的 Zcode + DeepSeek Harness 接入定制（3-way 补丁集）",
+  "base_version": "4.0.20",
+  "base_tag": "v4.0.20",
+  "generated_at": "2026-11-22T19:40:12+08:00",
+  "version_suffix": "",
+  "count": 69,
+  "entries": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "ours_sha256": "aeacdec83f8948fcb7d70d8ad039cb76805f052efe868ed65ed9e0fd9259dee1",
+      "op": "modify",
+      "base_sha256": "67dd49d255ed411abd995724555f8e7112f16f69b2b8dbfb2acbdc551e8c5e62"
+    },
+    {
+      "path": "NOTICE.md",
+      "ours_sha256": "b5813ff2e2460ed7845bcada05c97849eb46549ea1da68ca74832bef746f5fbe",
+      "op": "add"
+    },
+    {
+      "path": "README.md",
+      "ours_sha256": "03b23f187991c80a8c1ade701f3c65c9e9f518970eb833e424e425d5d318f0d0",
+      "op": "modify",
+      "base_sha256": "f57d7e8afdf076af8f8dd59cca72f69186222db82ab8ece6255bbbbb7f723a33"
+    },
+    {
+      "path": "src-tauri/src/app_config.rs",
+      "ours_sha256": "1436b5d9500ecadbf430d8439c077e0c22dfe98e15051a7457dcd2ba7f4dc004",
+      "op": "modify",
+      "base_sha256": "cd0f79c27b1196a2e36539dd9e40fd10035214bfd79e213d013c446480477820"
+    },
+    {
+      "path": "src-tauri/src/commands/config.rs",
+      "ours_sha256": "b685758f7dd71423257c229b9c55bf186895a8f4d85ee9fae2f019a9572c7072",
+      "op": "modify",
+      "base_sha256": "e4b4d9956e942405e19b572ac78d96f05c899c6bceab4f0e1882f7a5627ac1b6"
+    },
+    {
+      "path": "src-tauri/src/commands/misc.rs",
+      "ours_sha256": "ed315465483582a749cb6d29cc414712403cfa16dee85fad97534e8fbc9120b9",
+      "op": "modify",
+      "base_sha256": "dd1ce336f185a05b6ce5622b5eca019d677ba28eaf1ea1f57da117b2260c6dd0"
+    },
+    {
+      "path": "src-tauri/src/commands/provider.rs",
+      "ours_sha256": "3ecc74dc0acb4670bff722a1125edc73706328f2a1adcc4f1d061abda02afb13",
+      "op": "modify",
+      "base_sha256": "065913c2c3e5c8d5b88a43393e2f1f90dbfc9af9ac5e4084f048ee9e383036a0"
+    },
+    {
+      "path": "src-tauri/src/database/dao/mcp.rs",
+      "ours_sha256": "de7ab0cae75a58f1bb2ad88b91c232b4287d94bce3eb2e3e5569b8ae92d35818",
+      "op": "modify",
+      "base_sha256": "971fa67d92905237c7b3870dcbe2e2db8269467e637e5436951a51e029aa6713"
+    },
+    {
+      "path": "src-tauri/src/database/schema.rs",
+      "ours_sha256": "b5b80a8fcb25310cdf741aeea0410cbb1ccdda9eac00ced6135c2e391936b047",
+      "op": "modify",
+      "base_sha256": "c67c96949f06b75dfcc6a6c01f9e686bf55ad40d4fc5d5875083100ebc2c2a73"
+    },
+    {
+      "path": "src-tauri/src/database/tests.rs",
+      "ours_sha256": "b51fde3f2aa5eb9e9b4bb23427c76dc621457f805e5d7892e4bf4736d94b3de1",
+      "op": "modify",
+      "base_sha256": "71f108b9c7f97ceca2fdd10da46a6ca77186422dcd18101721539f99f0b80c1e"
+    },
+    {
+      "path": "src-tauri/src/deeplink/provider.rs",
+      "ours_sha256": "9963c50c5fb5191f527a814145f59fe69b8004b0fe3253c99f03fe2064f48439",
+      "op": "modify",
+      "base_sha256": "5344c53e7e278c485a9344f00afda3a57218af4da4c7376307057b66c60df39d"
+    },
+    {
+      "path": "src-tauri/src/dsh_config.rs",
+      "ours_sha256": "7401e194d755ef92680b4b9f2b383de55704d48c0329a78f4ca1134c5cb5b170",
+      "op": "add"
+    },
+    {
+      "path": "src-tauri/src/lib.rs",
+      "ours_sha256": "8f8bb0c96c3bd5abafea4c79f8cca9bcc2895a600876955f4ac7c1255497c7ea",
+      "op": "modify",
+      "base_sha256": "8826c81352bc89cce2c96676bf5a255013308620054816ac8b31aba5c215a813"
+    },
+    {
+      "path": "src-tauri/src/prompt_files.rs",
+      "ours_sha256": "814959fd791c532ac507fdb3aac8c2ae496cee2714c6980d2e071bdd1c561036",
+      "op": "modify",
+      "base_sha256": "1e8bde73f129eb07652b2fe6a9d920c8ab961ba7cfba4445f88ee84210a3d602"
+    },
+    {
+      "path": "src-tauri/src/provider.rs",
+      "ours_sha256": "774fae4f53e1181143a62216547d57a5dc598d44f87bd4bf57855acdebbda1cf",
+      "op": "modify",
+      "base_sha256": "8a59de643675a62a0d485c1a70396b02ce5e09738ed4ba7d5376a09c10f908cd"
+    },
+    {
+      "path": "src-tauri/src/proxy/providers/codex.rs",
+      "ours_sha256": "db3cd84dd1b24c34fa30ed74996be3272dbc937c2d22230b60bcf06016e06cef",
+      "op": "modify",
+      "base_sha256": "e01dab142befa4864175d4c64477b30e6b36444f367eb89f3e27d24b25547f75"
+    },
+    {
+      "path": "src-tauri/src/proxy/providers/mod.rs",
+      "ours_sha256": "e4e1384ead8ba440c3d476e362379de8e740a90314620b22a730f7d45bb2f15a",
+      "op": "modify",
+      "base_sha256": "6a5760b9266677ff22d69e2c1e7cf1a99fa2667a7f0d3c6aad7f186e6a328d93"
+    },
+    {
+      "path": "src-tauri/src/services/mcp.rs",
+      "ours_sha256": "8f029d6d5a5757207da94f4f36ab5e782c510f38eef33beb48429cd86dc358d2",
+      "op": "modify",
+      "base_sha256": "329c79b59a78bc050e24dc259599f09ce4eed86d40415577af0e1ff3405dd8e1"
+    },
+    {
+      "path": "src-tauri/src/services/mod.rs",
+      "ours_sha256": "5995f34f3a04312afbba98f12cdd779ac8fbeb997ce94ed4ffa5b040523c5ed6",
+      "op": "modify",
+      "base_sha256": "786c292cf1b3c6cf6aea5a8873d3909ba17bde6bdbe07862d242924c5d26bbb7"
+    },
+    {
+      "path": "src-tauri/src/services/provider/live.rs",
+      "ours_sha256": "e0bb886c3b45bc2e271aa0ecc4100a1682e2f8e1832b1579dd77348b982c7eb4",
+      "op": "modify",
+      "base_sha256": "c8dfdb41eea167758aed994731d9ebf5c0ddb3f96c6a8afba6ba8483da530d9f"
+    },
+    {
+      "path": "src-tauri/src/services/provider/mod.rs",
+      "ours_sha256": "ad909e2f0237775799ed4b0f9f04a33e888568077009466635b14bd96ab08e43",
+      "op": "modify",
+      "base_sha256": "988592c10c27bcd30c11f80894b6d03b1c05c078a91595fe70c17903cea0812f"
+    },
+    {
+      "path": "src-tauri/src/services/session_usage.rs",
+      "ours_sha256": "84779ece85a48892ddee4d1dc1da4e421b25963574b6c8c2eb726535aab356bb",
+      "op": "modify",
+      "base_sha256": "5896fe2d504b8d8344fa473bbe3f86ab981250f1c8a9cd5959356092bf7f7f0f"
+    },
+    {
+      "path": "src-tauri/src/services/session_usage_agy.rs",
+      "ours_sha256": "c307985efbee7f6e2184babc78bfedc186b00415e0d25c842db5e43702a6f9ba",
+      "op": "modify",
+      "base_sha256": "c3a159749d0da1171dc5c85bc2210350bee85750b0c334b9cdf3aef2dd002dea"
+    },
+    {
+      "path": "src-tauri/src/services/session_usage_agy/native_models.rs",
+      "ours_sha256": "fa6ef94935a314dc23dac4e201ba0032dd086bbf68fdb99ed607e759bbfa6046",
+      "op": "modify",
+      "base_sha256": "5a7e9191e51ec5547f686c308597a0754e11bad720350ee92b95dcbb48d96d89"
+    },
+    {
+      "path": "src-tauri/src/services/session_usage_dsh.rs",
+      "ours_sha256": "c5531acb05e5c955165476e725c8d36e03a56aaf6d9afb2f12603887912e1919",
+      "op": "add"
+    },
+    {
+      "path": "src-tauri/src/services/session_usage_zcode.rs",
+      "ours_sha256": "877a50a403e1fc2139c98489468011b289a3a8d3b2e4428364e6099942398d27",
+      "op": "add"
+    },
+    {
+      "path": "src-tauri/src/services/skill.rs",
+      "ours_sha256": "90d239f83fe4cb0a7a5a9cf4f8a5d297071ebc0a5c1b5ed3f9bb524f6a1df7a3",
+      "op": "modify",
+      "base_sha256": "3600be23a7cebfab29533a57d710006540d1be58e3b99fe07f7537117137f36f"
+    },
+    {
+      "path": "src-tauri/src/services/stream_check.rs",
+      "ours_sha256": "bcceed0a7a71255fd9c3bbd5ecb9216c87851b27ab9951e486fb81a5c89c28c1",
+      "op": "modify",
+      "base_sha256": "0eaab338a6b51de00b6e7e6a08a80a4cf229b2894df9cc0659b3d2e7e112a7d3"
+    },
+    {
+      "path": "src-tauri/src/services/usage_stats.rs",
+      "ours_sha256": "4f2043e7fd4f87b8806f78d84e6aea7b1dac4ebc78f80d3790c7c2a24b6e69db",
+      "op": "modify",
+      "base_sha256": "5804d38d1336d42fe96fc598a874a3a4c043abd4d2c1b6139e2d4bb15f7db3af"
+    },
+    {
+      "path": "src-tauri/src/session_manager/providers/agy.rs",
+      "ours_sha256": "9feebfde589ff63a6ccbb6d56e45d2682a4c00cf0f11a53d64dcc13eb3cbee16",
+      "op": "modify",
+      "base_sha256": "2d92273f2c1324a267dcfbc699da3f7d639797e15c035ce6844000f2800224f6"
+    },
+    {
+      "path": "src-tauri/src/settings.rs",
+      "ours_sha256": "39993aaa365f48e17c895d85c20c4ece9774715c254125d494a1e09bad217ece",
+      "op": "modify",
+      "base_sha256": "c2860403dd50102bf5b8e1d9755ebb7916a8bfb33f34c8cbe10c5dcbb79548a4"
+    },
+    {
+      "path": "src-tauri/src/tray.rs",
+      "ours_sha256": "e29af672535bbd334b27efdb35b3aa3f900a8fac5d07e53908e971fec15023a1",
+      "op": "modify",
+      "base_sha256": "952e98f5ff2b047bc148d7e60128a2810314240cdb46b3bd8dec84fe4f2a8efb"
+    },
+    {
+      "path": "src-tauri/src/zcode_config.rs",
+      "ours_sha256": "8256a5f402d19d86761d4fb6dec8d200f6f0c697918923c12d89a4cb4b4fba23",
+      "op": "add"
+    },
+    {
+      "path": "src-tauri/tauri.conf.json",
+      "ours_sha256": "8f5aa721fa1170fa230cb3fda53b03c2080b4311aaa25f0cc6f7c6859470f2da",
+      "op": "modify",
+      "base_sha256": "ac0042b477a60cdff9578f56a6ba69433eb1aa3797adba77ad269992ad5016a1"
+    },
+    {
+      "path": "src/components/BrandIcons.tsx",
+      "ours_sha256": "d284cc7bfb35f1dfbe7b635b245c51d27969daee235f050c681a5c8bc8b2ea5e",
+      "op": "modify",
+      "base_sha256": "51865d5f0ee3181869c04aee1301e5ba75963515629be49fe8693174c3e7a72a"
+    },
+    {
+      "path": "src/components/DatabaseUpgrade.tsx",
+      "ours_sha256": "076f680526282c8a0b2244b496ce4d87d97a089f1b77d82ccba8bfc6a8022de3",
+      "op": "modify",
+      "base_sha256": "0abd0c74b3e02ee2b69f2153c8cbca5c5e1d8af6782fca81271f2d4a85324a79"
+    },
+    {
+      "path": "src/components/apps/AppsPage.tsx",
+      "ours_sha256": "6e1ff546901b25051b679ca6ae7e148b02e6448ca0950fc93032e3bc2bfab177",
+      "op": "modify",
+      "base_sha256": "e17c06260174db04e2aebca323d6bb0ba4f367a043a5449b215fff10c217dfdf"
+    },
+    {
+      "path": "src/components/providers/ProviderList.tsx",
+      "ours_sha256": "d748f6580e74f319f1d261bd70763086420683359e8e83e84eadf4ab6b3d552b",
+      "op": "modify",
+      "base_sha256": "ebb837e22522917fa16b0819a8d44298a837221c7fc02ad10442056246115262"
+    },
+    {
+      "path": "src/components/providers/forms/EndpointSpeedTest.tsx",
+      "ours_sha256": "dac1ae7b56bdfb07a2655115406107627ed6e41c8f4bcd2d09a7bc120f08934c",
+      "op": "modify",
+      "base_sha256": "76d2b90ff51b464eeea9ffea7c75dc6f625c2b920cb3ab11a0a8b1d741a4adb0"
+    },
+    {
+      "path": "src/components/settings/AboutSection.tsx",
+      "ours_sha256": "36727a2200c6a336f3e7cb213053d910dcfefd53ac0626c0a182768b1ced4eae",
+      "op": "modify",
+      "base_sha256": "8525619c9d19345fd30b5a839df3db426a3b07097b5c84a63b801514e0f19bc4"
+    },
+    {
+      "path": "src/components/settings/DirectorySettings.tsx",
+      "ours_sha256": "bd0188bfecb1cecd24812eb2c198b2f26820d354dc70e27e117fd89f9c0cc8d3",
+      "op": "modify",
+      "base_sha256": "cc768defa41f3000d48a1449dc651a08a2c21245e3d7edafaed702823690fa75"
+    },
+    {
+      "path": "src/components/shell/AppGlyph.tsx",
+      "ours_sha256": "0ee5206c6f4ea4d7f9b7597c696dc5d6f49c4d6efd358bcbdbee0dca6c0ddf52",
+      "op": "modify",
+      "base_sha256": "3e344d2446a9e23841f15d18470ae1aa75c61348c1b5387349c86d1f26e67bc2"
+    },
+    {
+      "path": "src/components/shell/NewLayoutDialog.tsx",
+      "ours_sha256": "25b680109b8756828cb0d38a458d3039591ca04b24471ca5ca4f2328b540a48c",
+      "op": "modify",
+      "base_sha256": "590e86b0cc644b8e1db879eb7edddbf90150966cada5134c4af6764951753275"
+    },
+    {
+      "path": "src/components/usage/RequestLogTable.tsx",
+      "ours_sha256": "662ebd5bfa35ae017b50108f28c1419c25bf85ab027d72d8352dda80781dbc6d",
+      "op": "modify",
+      "base_sha256": "886de5ecd4ab5158259a8a1791c2e0b01b6ec51744a300e4a3ba99e98b9d70ed"
+    },
+    {
+      "path": "src/config/appConfig.tsx",
+      "ours_sha256": "308aa2467cf21f80e16fbb31c95db54a6c3816139bab6870425011c2a8c61186",
+      "op": "modify",
+      "base_sha256": "47251f56e1904d65462e87f6591841e3dec6ac095eb26f22f1445e72369c8b60"
+    },
+    {
+      "path": "src/config/codingPlanProviders.ts",
+      "ours_sha256": "a44ac99228743fbb3a9b1a1f21e77ed03239bf488716fce324a37056215d532b",
+      "op": "modify",
+      "base_sha256": "4b3f5c61fa1b02d76c50d7de4d3bb2646dfd7138f823162c551e955a4df82ceb"
+    },
+    {
+      "path": "src/hooks/useDirectorySettings.ts",
+      "ours_sha256": "b43b64b88f4133df71daa2c04e929fcee4fa2597947b72e063be65d78c738ea4",
+      "op": "modify",
+      "base_sha256": "68eebe8ad1929ed87178004592329d5a7e03c813fdac75dd2af4afb69eda9cf8"
+    },
+    {
+      "path": "src/i18n/locales/en.json",
+      "ours_sha256": "64da15b19bce090d282472a82e362e88920e276b6d8e1576cd4c37e8361a206c",
+      "op": "modify",
+      "base_sha256": "f15a5f59cbc3b9e2bb3af0b71d37086d5e764ff763e857b2f0eb02594c731449"
+    },
+    {
+      "path": "src/i18n/locales/ja.json",
+      "ours_sha256": "9297114de31ab67ff224fb88ffd5e5d875684979701768ab9652a507d5685740",
+      "op": "modify",
+      "base_sha256": "cb317dde0cf1162476f635d744464b23fe25a2399624f8b717ab860d7147bb26"
+    },
+    {
+      "path": "src/i18n/locales/tr.json",
+      "ours_sha256": "a872aace5eb35a486fbce9b4c4eeb14b4d812f56eaa810f5b33b53c344e4af65",
+      "op": "modify",
+      "base_sha256": "5c393501e455966ef97f19d995870f8e57a8b4ea2c9b01a164635ea4a7b91a8a"
+    },
+    {
+      "path": "src/i18n/locales/zh-TW.json",
+      "ours_sha256": "22d1ba45bf3ae04544fdc401e5230e03819689e85cd3a324e254718a18998ab2",
+      "op": "modify",
+      "base_sha256": "e2f739fe7833393498c2354d2ec2d4adf35100fc97b92d081d1937b704266e03"
+    },
+    {
+      "path": "src/i18n/locales/zh.json",
+      "ours_sha256": "35c6311b0f85cff45cc7642d583d83a6fd2c6a8150e9ff64b4697b9c38e37e1d",
+      "op": "modify",
+      "base_sha256": "49f71eb116b089c09f50060589a86551897a4c4980424160d1d55b0fcbf8d340"
+    },
+    {
+      "path": "src/icons/extracted/dsh.png",
+      "ours_sha256": "12064ff340e65872715cb18e56cfa9d3afe294fed98c81807d39e230a030d972",
+      "op": "add"
+    },
+    {
+      "path": "src/icons/extracted/index.ts",
+      "ours_sha256": "a57ab7e7467d91db5f5e2ed59b706c270086787c2674b443250bce492fb01348",
+      "op": "modify",
+      "base_sha256": "8ba9c5a46513e5bd31453edfcff7ed662462058a46ecf26afafa796dd454c0d5"
+    },
+    {
+      "path": "src/lib/api/providers.ts",
+      "ours_sha256": "3ddbc0e439b354aaf23eb5cd5a0d507b50997b9dd684d08e6d93de40d0f7b9a3",
+      "op": "modify",
+      "base_sha256": "efe88c1fdf954055457136f6e160b350e38962afd59139ddc7fa758e28134e48"
+    },
+    {
+      "path": "src/lib/api/skills.ts",
+      "ours_sha256": "3d4453c3ee3d39e3f82ce27c5c2953e649eecc9c8a5ddfcecc49c79bf5dddd7c",
+      "op": "modify",
+      "base_sha256": "2eaf89e1a8bd6e47a3493ea07244fffb7902cfbac8f8e8797e1750203c2214e5"
+    },
+    {
+      "path": "src/lib/api/types.ts",
+      "ours_sha256": "77dafa125f899f98e59b4483802cd972dfda4580e9ec89b8f44c262ed81c8edf",
+      "op": "modify",
+      "base_sha256": "981a39ef45ee80a15db0d56ef09381da4f66ed72658e8b4dafac0483f7f05e7b"
+    },
+    {
+      "path": "src/lib/query/mutations.ts",
+      "ours_sha256": "fba350e57b801fc44016289ef149fe35c3b69affe839a04e68892086bfbe04e7",
+      "op": "modify",
+      "base_sha256": "5ff7e3d31e11eedff296b330f1b19a9113675ac5e1cf3b0c43619020a3a9bb6a"
+    },
+    {
+      "path": "src/lib/updater.ts",
+      "ours_sha256": "cc5a0b78fd66583661c100fdcf0f5ffaacb01cd36237777646193f33d2f61d0b",
+      "op": "modify",
+      "base_sha256": "1ba7ee59c360ec238173eead02002204009c4a71764e4011be79fb642b62c69d"
+    },
+    {
+      "path": "src/types.ts",
+      "ours_sha256": "abdff07ac67aeb14e38d3af85ce2c406b39652af6da1c66befef49b2742f2ed4",
+      "op": "modify",
+      "base_sha256": "70a9a6e24e350c86cd7549698e280ad98225418632f77567714aa495f8075c1b"
+    },
+    {
+      "path": "src/types/usage.ts",
+      "ours_sha256": "48b858586f582f4976848c1f7f2301e605b3171fc560f2054e6364a5fc701aa3",
+      "op": "modify",
+      "base_sha256": "7f7c94717a69e07980a5971259b8eee044f8656d9c9ae56cb3c96a4229abc8d1"
+    },
+    {
+      "path": "tests/components/AppsPage.test.tsx",
+      "ours_sha256": "f516d34f2b019bfb893c803ae2bf822f4e2a1e83d236e8d26a77ccb89c173324",
+      "op": "modify",
+      "base_sha256": "042e1e14f561fc23bfa126a7888753c7b7b5c50bf1a1ffa871340e4ee0c2cba7"
+    },
+    {
+      "path": "tests/components/NewLayoutDialog.test.tsx",
+      "ours_sha256": "4bde065788cb32f7b833e287b7c624482e3a0a081c5516d794a53a85a7bb6664",
+      "op": "modify",
+      "base_sha256": "20f0652b43bfb39d555f099bffb59619a09d37545c9ca97a67959e1c8b4b56b8"
+    },
+    {
+      "path": "tests/components/PiProviderForm.test.tsx",
+      "ours_sha256": "b1c0154b10156ded552b7feceacf1358074c2995bb398fd90c859227b0a68b4f",
+      "op": "modify",
+      "base_sha256": "bbdfb1c0b7d38f2f1bd4f38f0b00a55794348292fce39a2202ddfe89041ede4d"
+    },
+    {
+      "path": "tests/components/SessionManagerPage.test.tsx",
+      "ours_sha256": "cc1887400e494c5cacb897503ab34f5e3e8f9a1538b9706ff038e0ec3d21a179",
+      "op": "modify",
+      "base_sha256": "335295ae6a26cc36a9ebc1cfce30c93523c71b731d13d37f13578a9875c69ad4"
+    },
+    {
+      "path": "tests/components/UsageDashboard.test.tsx",
+      "ours_sha256": "24e92961f9301d6dd0564a936a70d859760379c327f25d46238faa75fea640c5",
+      "op": "modify",
+      "base_sha256": "f4c0925a8cd4ccd49fb41c6225c8ae64d0a4faf7b68830486671519acbb0884a"
+    },
+    {
+      "path": "tests/integration/App.test.tsx",
+      "ours_sha256": "084ee383dd7bd1ba92ff70bb95b916360491569b718e748a81c698654e316f21",
+      "op": "modify",
+      "base_sha256": "de6a612ef8b400691cd8832e385c22ecf9a805e3d6839f848d82c1db8ca75d81"
+    },
+    {
+      "path": "tests/msw/handlers.ts",
+      "ours_sha256": "aa2669b5f34a80543df95bcc5f6ad4e22199b7e15e671f5dfffccc0468967012",
+      "op": "modify",
+      "base_sha256": "df670b647413ca592d858f928362d5a9146695cb280ff1d53fa4eb798a8ddac1"
+    },
+    {
+      "path": "tests/msw/state.ts",
+      "ours_sha256": "938f288e5dee518527d8ddfc8bb07e1eb667cc48407748ad3932858d2e8d3840",
+      "op": "modify",
+      "base_sha256": "4c373dcc6c7898903d8b5f728eb0e49abd4ef1869e3011f5a79a0856be72c6ae"
+    }
+  ]
+}

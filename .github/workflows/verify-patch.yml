@@ -1,0 +1,37 @@
+name: Verify Patch
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Clone base v4.0.20
+        run: |
+          git clone --depth 1 --branch v4.0.20 https://github.com/farion1231/cc-switch.git upstream-base
+
+      - name: Test Apply Patch
+        run: |
+          cd upstream-base
+          git apply --check --whitespace=nowarn ../patchset/changes.diff
+          git apply --whitespace=nowarn ../patchset/changes.diff
+          git status --short
+          CHANGED_COUNT=$(git status --porcelain | wc -l)
+          echo "Successfully applied patch. Changed files count: $CHANGED_COUNT"
+          if [ "$CHANGED_COUNT" -ne 69 ]; then
+            echo "Expected 69 changed files, got $CHANGED_COUNT"
+            exit 1
+          fi
