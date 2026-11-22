@@ -188,7 +188,7 @@ impl Database {
             source: e,
         })?;
         let temp_path = temp_file.path().to_path_buf();
-        let temp_conn =
+        let mut temp_conn =
             Connection::open(&temp_path).map_err(|e| AppError::Database(e.to_string()))?;
         // SQLite Backup copies the source database header into the destination.
         // Configure the empty staging database before creating any tables so a

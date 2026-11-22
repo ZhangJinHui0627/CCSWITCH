@@ -5,6 +5,7 @@
 //! - 安装时下载到 SSOT，按需同步到各应用目录
 //! - 数据库存储安装记录和启用状态
 
+use crate::hex_encode;
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -1249,7 +1250,7 @@ impl SkillService {
             hasher.update(b"\0");
         }
 
-        Ok(format!("{:x}", hasher.finalize()))
+        Ok(format!("{}", hex_encode(&hasher.finalize())))
     }
 
     /// 递归收集目录下所有非隐藏文件
@@ -1304,7 +1305,7 @@ impl SkillService {
             hasher.update(b"\0");
         }
 
-        Ok(format!("{:x}", hasher.finalize()))
+        Ok(format!("{}", hex_encode(&hasher.finalize())))
     }
 
     fn collect_tree_entries(current: &Path, entries: &mut Vec<PathBuf>) -> Result<()> {
@@ -3947,7 +3948,13 @@ impl SkillService {
     ) -> Result<()> {
         let root_name = if !archive.is_empty() {
             let first_file = archive.by_index(0)?;
-            let name = first_file.name();
+            let name = first_file.name().map_err(|e| {
+                anyhow::anyhow!(format_skill_error(
+                    "ARCHIVE_ENTRY_NAME",
+                    &[("error", &e.to_string())],
+                    None
+                ))
+            })?;
             name.split('/').next().unwrap_or("").to_string()
         } else {
             return Err(anyhow::anyhow!(format_skill_error(
@@ -3979,8 +3986,22 @@ impl SkillService {
             // 第一道：enclosed_name() 拒绝绝对路径、盘符前缀，以及净深度为负
             // （即逃出归档自身根目录）的条目。skill 仓库可由 deeplink 添加，
             // 压缩包内容属第三方可控输入。
+            // zip 9 的 enclosed_name 会**消解** `..`（净深度非负时返回消解后的路径），
+            // 所以不能只看消解后的 file_path——必须对原始条目名查未消解的 `..`。
+            // 消解式重定位会让 `e/../d/leaked.txt` 静默落进 d/，绕过越界审计。
+            let raw_entry_name = file
+                .name()
+                .unwrap_or_else(|_| std::borrow::Cow::Owned(String::new()));
+            if raw_entry_name.split(['/', '\\']).any(|seg| seg == "..") {
+                log::warn!("跳过含未消解 `..` 的压缩包条目: {raw_entry_name}");
+                continue;
+            }
             let Some(safe_path) = file.enclosed_name() else {
-                log::warn!("跳过不安全的压缩包条目: {}", file.name());
+                log::warn!(
+                    "跳过不安全的压缩包条目: {}",
+                    file.name()
+                        .unwrap_or_else(|_| std::borrow::Cow::Borrowed("?"))
+                );
                 continue;
             };
 
@@ -3998,7 +4019,11 @@ impl SkillService {
                 .components()
                 .any(|c| matches!(c, Component::ParentDir))
             {
-                log::warn!("跳过越界的压缩包条目: {}", file.name());
+                log::warn!(
+                    "跳过越界的压缩包条目: {}",
+                    file.name()
+                        .unwrap_or_else(|_| std::borrow::Cow::Borrowed("?"))
+                );
                 continue;
             }
 
@@ -4010,7 +4035,11 @@ impl SkillService {
 
             if file.is_symlink() {
                 let Some(target) = Self::read_symlink_target(&mut file, &mut total_bytes)? else {
-                    log::warn!("跳过目标不合法的 symlink 条目: {}", file.name());
+                    log::warn!(
+                        "跳过目标不合法的 symlink 条目: {}",
+                        file.name()
+                            .unwrap_or_else(|_| std::borrow::Cow::Borrowed("?"))
+                    );
                     continue;
                 };
                 symlinks.push((outpath, target));
@@ -4550,11 +4579,25 @@ impl SkillService {
             // 路径会让后面的 symlink 自包含检查失去可比性（`e/../d/self` 与 `d`
             // 逐组件比在第一段就错开）。在入口就把它们挡掉，保证落进 symlinks
             // 表里的路径都是规范形状。
+            // zip 9 的 enclosed_name 会**消解** `..`（净深度非负时返回消解后的路径），
+            // 所以不能只看消解后的 file_path——必须对原始条目名查未消解的 `..`。
+            // 消解式重定位会让 `e/../d/leaked.txt` 静默落进 d/，绕过越界审计。
+            let raw_entry_name = file
+                .name()
+                .unwrap_or_else(|_| std::borrow::Cow::Owned(String::new()));
+            if raw_entry_name.split(['/', '\\']).any(|seg| seg == "..") {
+                log::warn!("跳过含未消解 `..` 的压缩包条目: {raw_entry_name}");
+                continue;
+            }
             if file_path
                 .components()
                 .any(|c| matches!(c, Component::ParentDir))
             {
-                log::warn!("跳过越界的压缩包条目: {}", file.name());
+                log::warn!(
+                    "跳过越界的压缩包条目: {}",
+                    file.name()
+                        .unwrap_or_else(|_| std::borrow::Cow::Borrowed("?"))
+                );
                 continue;
             }
 
@@ -4562,7 +4605,11 @@ impl SkillService {
 
             if file.is_symlink() {
                 let Some(target) = Self::read_symlink_target(&mut file, &mut total_bytes)? else {
-                    log::warn!("跳过目标不合法的 symlink 条目: {}", file.name());
+                    log::warn!(
+                        "跳过目标不合法的 symlink 条目: {}",
+                        file.name()
+                            .unwrap_or_else(|_| std::borrow::Cow::Borrowed("?"))
+                    );
                     continue;
                 };
                 symlinks.push((outpath, target));

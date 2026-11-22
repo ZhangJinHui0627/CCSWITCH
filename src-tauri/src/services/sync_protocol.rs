@@ -2,6 +2,7 @@
 //!
 //! Shared by WebDAV, S3, and future transports. Artifact set: `db.sql` + `skills.zip`.
 
+use crate::hex_encode;
 use std::collections::BTreeMap;
 use std::fs;
 use std::future::Future;
@@ -407,7 +408,7 @@ pub(crate) fn apply_snapshot(
 pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
-    format!("{:x}", hasher.finalize())
+    format!("{}", hex_encode(&hasher.finalize()))
 }
 
 pub(crate) fn detect_system_device_name() -> Option<String> {

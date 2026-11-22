@@ -1,6 +1,7 @@
 //! Import Kimi Code's committed request usage. Tokens are already normalized to fresh input.
 use crate::database::{lock_conn, Database};
 use crate::error::AppError;
+use crate::hex_encode;
 use crate::kimi_session::{timestamp_ms, RequestIndex};
 use crate::proxy::usage::{calculator::CostCalculator, parser::TokenUsage};
 use crate::services::{
@@ -176,7 +177,12 @@ fn sync_file(
             .and_then(Value::as_str)
             .filter(|id| !id.is_empty())
             .map(str::to_owned)
-            .unwrap_or_else(|| format!("{:x}", Sha256::digest(record.to_string().as_bytes())));
+            .unwrap_or_else(|| {
+                format!(
+                    "{}",
+                    hex_encode(Sha256::digest(record.to_string()).as_slice())
+                )
+            });
         let provider = meta
             .pointer("/model/provider")
             .and_then(Value::as_str)

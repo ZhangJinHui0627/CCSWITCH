@@ -4,6 +4,7 @@
 mod account;
 mod lock;
 
+use crate::hex_encode;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -66,7 +67,10 @@ impl Endpoints {
             json!({"storage": "file", "key": "oauth/kimi-code"})
         } else {
             let environment = json!({"oauthHost": self.oauth_host, "baseUrl": self.base_url});
-            let digest = format!("{:x}", Sha256::digest(environment.to_string().as_bytes()));
+            let digest = format!(
+                "{}",
+                hex_encode(Sha256::digest(environment.to_string()).as_slice())
+            );
             json!({"storage": "file", "key": format!("oauth/kimi-code-env-{}", &digest[..16]), "oauth_host": self.oauth_host})
         }
     }

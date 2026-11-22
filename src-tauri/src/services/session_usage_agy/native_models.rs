@@ -152,7 +152,7 @@ pub(super) fn write_test_database(path: &Path, entries: &[(i64, u64, &str)]) -> 
         .unwrap();
         conn.execute(
             "INSERT INTO gen_metadata VALUES (?1,?2)",
-            rusqlite::params![generation, data.encode_to_vec()],
+            rusqlite::params![generation as i64, data.encode_to_vec()],
         )
         .unwrap();
     }

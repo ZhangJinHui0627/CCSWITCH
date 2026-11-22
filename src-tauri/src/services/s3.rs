@@ -4,6 +4,7 @@
 //! Implements AWS Signature Version 4 request signing.
 //! The sync protocol logic lives in the upcoming `s3_sync` module.
 
+use crate::hex_encode;
 use reqwest::StatusCode;
 use std::time::Duration;
 use url::Url;
@@ -91,14 +92,15 @@ fn build_bucket_url(creds: &S3Credentials) -> String {
 fn hmac_sha256(key: &[u8], data: &[u8]) -> Vec<u8> {
     use hmac::{Hmac, Mac};
     type HmacSha256 = Hmac<sha2::Sha256>;
-    let mut mac = HmacSha256::new_from_slice(key).expect("HMAC accepts any key length");
+    let mut mac =
+        <HmacSha256 as hmac::KeyInit>::new_from_slice(key).expect("HMAC accepts any key length");
     mac.update(data);
     mac.finalize().into_bytes().to_vec()
 }
 
 fn sha256_hex(data: &[u8]) -> String {
     use sha2::{Digest, Sha256};
-    format!("{:x}", Sha256::digest(data))
+    format!("{}", hex_encode(&Sha256::digest(data)))
 }
 
 /// Percent-encode following AWS Sig V4 rules (RFC 3986 unreserved characters only).

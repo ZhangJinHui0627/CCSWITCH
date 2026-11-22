@@ -27,6 +27,7 @@ use super::{
     ProxyError,
 };
 use crate::commands::{CodexOAuthState, CopilotAuthState, XaiOAuthState};
+use crate::hex_encode;
 use crate::proxy::providers::copilot_auth::{CopilotAuthError, CopilotAuthManager};
 use crate::proxy::providers::copilot_model_map::{
     CopilotProtocol, CopilotTransport, ResolvedCopilotModel,
@@ -93,7 +94,7 @@ fn conversation_fingerprint(body: &Value) -> Option<String> {
     if !fed {
         return None;
     }
-    let digest = format!("{:x}", hasher.finalize());
+    let digest = format!("{}", hex_encode(&hasher.finalize()));
     Some(format!("ccsw-{}", &digest[..32]))
 }
 

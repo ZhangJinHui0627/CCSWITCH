@@ -5,6 +5,7 @@
 
 use crate::config::{atomic_write_private, get_home_dir};
 use crate::error::AppError;
+use crate::hex_encode;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -491,7 +492,7 @@ fn ensure_models_revision(path: &Path, expected_revision: &str) -> Result<(), Ap
 }
 
 fn revision(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    format!("{}", hex_encode(&Sha256::digest(bytes)))
 }
 
 fn ensure_private_models_parent(path: &Path) -> Result<(), AppError> {
