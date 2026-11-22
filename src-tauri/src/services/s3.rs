@@ -100,7 +100,7 @@ fn hmac_sha256(key: &[u8], data: &[u8]) -> Vec<u8> {
 
 fn sha256_hex(data: &[u8]) -> String {
     use sha2::{Digest, Sha256};
-    format!("{}", hex_encode(&Sha256::digest(data)))
+    hex_encode(&Sha256::digest(data))
 }
 
 /// Percent-encode following AWS Sig V4 rules (RFC 3986 unreserved characters only).

@@ -128,14 +128,14 @@ pub(super) fn account_suffix(region: KimiRegion, user_id: &str) -> String {
         KimiRegion::Global => "global",
     };
     let digest = Sha256::digest(format!("{region}:{user_id}").as_bytes());
-    format!("{}", hex_encode(&digest))[..8].to_string()
+    hex_encode(&digest)[..8].to_string()
 }
 
 pub(super) fn token_marker(credential: &Value) -> Option<String> {
     let refresh = credential["refresh_token"]
         .as_str()
         .filter(|s| !s.is_empty())?;
-    Some(format!("{}", hex_encode(&Sha256::digest(refresh.as_bytes())))[..16].to_string())
+    Some(hex_encode(&Sha256::digest(refresh.as_bytes()))[..16].to_string())
 }
 
 fn string_field(payload: &Value, key: &str) -> Option<String> {

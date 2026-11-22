@@ -3,26 +3,21 @@
 //! refreshes (for quota) under the same cross-process lock, see [`lock`].
 mod account;
 mod lock;
-
 use crate::hex_encode;
+use crate::{config::atomic_write_private, kimi_config, services::subscription::SubscriptionQuota};
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Map, Value};
+use sha2::{Digest, Sha256};
 use std::{
     fs,
     path::{Path, PathBuf},
     sync::LazyLock,
     time::{Duration, Instant},
 };
-
-use regex::Regex;
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
-use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
-
-use crate::{config::atomic_write_private, kimi_config, services::subscription::SubscriptionQuota};
-
 const CLIENT_ID: &str = "17e5f671-d194-4dfb-9706-5516cb48c098";
 const PROVIDER_ID: &str = kimi_config::OFFICIAL_PROVIDER_ID;
-
 #[derive(Clone, Copy, Default, Deserialize, Serialize, PartialEq, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub enum KimiRegion {
@@ -30,7 +25,6 @@ pub enum KimiRegion {
     MainlandCn,
     Global,
 }
-
 impl KimiRegion {
     fn endpoints(self) -> Endpoints {
         let (oauth_host, base_url) = match self {
@@ -43,13 +37,11 @@ impl KimiRegion {
         }
     }
 }
-
 #[derive(Clone)]
 struct Endpoints {
     oauth_host: String,
     base_url: String,
 }
-
 impl Endpoints {
     fn region(&self) -> KimiRegion {
         if self.oauth_host == "https://auth.kimi.ai" {
@@ -58,7 +50,6 @@ impl Endpoints {
             KimiRegion::MainlandCn
         }
     }
-
     fn oauth_ref(&self) -> Value {
         // Match Kimi Code's native default slot for this environment.
         if self.oauth_host == "https://auth.kimi.com"
@@ -67,15 +58,11 @@ impl Endpoints {
             json!({"storage": "file", "key": "oauth/kimi-code"})
         } else {
             let environment = json!({"oauthHost": self.oauth_host, "baseUrl": self.base_url});
-            let digest = format!(
-                "{}",
-                hex_encode(Sha256::digest(environment.to_string()).as_slice())
-            );
+            let digest = hex_encode(&Sha256::digest(environment.to_string().as_bytes()));
             json!({"storage": "file", "key": format!("oauth/kimi-code-env-{}", &digest[..16]), "oauth_host": self.oauth_host})
         }
     }
 }
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KimiOAuthStatus {
@@ -85,7 +72,6 @@ pub struct KimiOAuthStatus {
     /// empty list does not mean Kimi is signed out.
     pub primary_hidden: bool,
 }
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KimiOAuthAccount {
@@ -101,7 +87,6 @@ pub struct KimiOAuthAccount {
     pub expires_at: Option<i64>,
     pub error: Option<String>,
 }
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KimiLoginStart {
@@ -111,7 +96,6 @@ pub struct KimiLoginStart {
     pub expires_in: u64,
     pub interval: u64,
 }
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KimiLoginPoll {
@@ -119,7 +103,6 @@ pub struct KimiLoginPoll {
     pub interval: u64,
     pub ended: Option<&'static str>,
 }
-
 impl KimiLoginPoll {
     fn pending(interval: u64) -> Self {
         Self {
@@ -136,13 +119,11 @@ impl KimiLoginPoll {
         }
     }
 }
-
 enum PollOutcome {
     Pending,
     Ready(Map<String, Value>),
     Ended(&'static str),
 }
-
 #[derive(Clone)]
 struct PendingLogin {
     polling: bool,
@@ -163,14 +144,12 @@ struct PendingLogin {
     // fails, so retry never consumes the single-use device grant again.
     credential: Option<Value>,
 }
-
 #[derive(Default)]
 pub struct KimiOAuthManager {
     pending: Mutex<Option<PendingLogin>>,
     /// Identity cache location; tests point it at a temporary directory.
     store: Option<PathBuf>,
 }
-
 fn credential_path(home: &Path, oauth: &Value) -> Result<PathBuf, String> {
     let key = oauth
         .get("key")
@@ -194,7 +173,6 @@ fn credential_path(home: &Path, oauth: &Value) -> Result<PathBuf, String> {
     }
     Ok(home.join("credentials").join(format!("{name}.json")))
 }
-
 fn account_status(
     home: &Path,
     id: &str,
@@ -232,11 +210,9 @@ fn account_status(
         error: None,
     })
 }
-
 fn read_config(home: &Path) -> Result<Value, String> {
     kimi_config::read(&home.join("config.toml")).map_err(|error| error.to_string())
 }
-
 /// A new account goes into Kimi's default slot while that is free; otherwise it
 /// gets its own credential slot `kimi-code-ccs-<suffix>`. Kimi shows a
 /// provider's key as its name, so a separate account's key is
@@ -268,7 +244,6 @@ fn new_account(
         Ok((PROVIDER_ID.into(), native_oauth))
     }
 }
-
 /// Kimi's own label for its default login ("Kimi 订阅" / "Kimi Subscription"),
 /// in CC Switch's language, so separate accounts sit next to it in the model
 /// picker as `Kimi 订阅 <nickname>`. Kimi only ships Chinese and English.
@@ -279,7 +254,6 @@ fn subscription_label() -> String {
         "Kimi Subscription".into()
     }
 }
-
 /// `<label> <nickname>` limited to what Kimi accepts as a provider name
 /// (letters, digits, `-`, `_` and spaces), numbered when another provider
 /// has the name.
@@ -303,7 +277,6 @@ fn readable_provider_id(config: &Value, label: &str, nickname: Option<&str>) -> 
         })
         .find(|id| !taken(id))
 }
-
 fn account_provider<'a>(config: &'a Value, id: &str) -> Result<&'a Value, String> {
     let provider = &config["providers"][id];
     if !kimi_config::is_official_provider(&json!({"provider": provider})) {
@@ -311,7 +284,6 @@ fn account_provider<'a>(config: &'a Value, id: &str) -> Result<&'a Value, String
     }
     Ok(provider)
 }
-
 fn account_region(provider: &Value) -> KimiRegion {
     if provider["oauth"]["oauth_host"].as_str() == Some("https://auth.kimi.ai")
         || provider["base_url"]
@@ -323,7 +295,6 @@ fn account_region(provider: &Value) -> KimiRegion {
         KimiRegion::MainlandCn
     }
 }
-
 fn login_target(
     home: &Path,
     region: KimiRegion,
@@ -347,7 +318,6 @@ fn login_target(
     }
     Ok((endpoints, Some(oauth)))
 }
-
 /// Pick where a finished login is saved, now that its identity is known:
 /// the same account (same region) signs in again in place, an explicit
 /// re-login keeps its slot unless a different account was used, and anything
@@ -399,7 +369,6 @@ fn resolve_target(
     }
     new_account(home, endpoints, &suffix, identity.nickname.as_deref())
 }
-
 fn network_error(context: &str, endpoint: &str, error: reqwest::Error) -> String {
     format!(
         "{context} ({}): {}",
@@ -407,7 +376,6 @@ fn network_error(context: &str, endpoint: &str, error: reqwest::Error) -> String
         crate::proxy::error::describe_reqwest_error(error)
     )
 }
-
 fn accounts_status(home: &Path, store: &Path) -> Result<KimiOAuthStatus, String> {
     let config = read_config(home)?;
     let store = account::Store::load(store);
@@ -461,7 +429,6 @@ fn accounts_status(home: &Path, store: &Path) -> Result<KimiOAuthStatus, String>
         primary_hidden,
     })
 }
-
 fn device_id(home: &Path) -> Result<String, String> {
     let path = home.join("device_id");
     match fs::read_to_string(&path) {
@@ -471,20 +438,17 @@ fn device_id(home: &Path) -> Result<String, String> {
         Err(e) => Err(format!("Cannot read Kimi device identity: {e}")),
     }
 }
-
 fn create_device_id(path: &Path) -> Result<String, String> {
     let id = uuid::Uuid::new_v4().to_string();
     atomic_write_private(path, id.as_bytes()).map_err(|e| e.to_string())?;
     Ok(id)
 }
-
 fn request(endpoints: &Endpoints, path: &str, device_id: &str) -> reqwest::RequestBuilder {
     identify(
         crate::proxy::http_client::get().post(format!("{}{path}", endpoints.oauth_host)),
         device_id,
     )
 }
-
 fn identify(request: reqwest::RequestBuilder, device_id: &str) -> reqwest::RequestBuilder {
     let hostname = std::env::var("COMPUTERNAME")
         .or_else(|_| std::env::var("HOSTNAME"))
@@ -519,7 +483,6 @@ fn identify(request: reqwest::RequestBuilder, device_id: &str) -> reqwest::Reque
         )
         .header("X-Msh-Os-Version", std::env::consts::OS)
 }
-
 async fn response_json(response: reqwest::Response) -> Result<(u16, Value), String> {
     let status = response.status().as_u16();
     let payload = response
@@ -528,14 +491,12 @@ async fn response_json(response: reqwest::Response) -> Result<(u16, Value), Stri
         .map_err(|_| format!("Unexpected Kimi response (HTTP {status})"))?;
     Ok((status, payload))
 }
-
 fn required_string<'a>(payload: &'a Value, key: &str) -> Result<&'a str, String> {
     payload[key]
         .as_str()
         .filter(|s| !s.is_empty())
         .ok_or_else(|| format!("Kimi response missing {key}"))
 }
-
 fn seconds(payload: &Value, key: &str, fallback: Option<u64>) -> Result<u64, String> {
     payload[key]
         .as_u64()
@@ -544,19 +505,17 @@ fn seconds(payload: &Value, key: &str, fallback: Option<u64>) -> Result<u64, Str
         .filter(|n| *n > 0 && *n <= 31_536_000)
         .ok_or_else(|| format!("Kimi response has invalid {key}"))
 }
-
 fn parse_credential(payload: &Value) -> Result<Value, String> {
     let access = required_string(payload, "access_token")?;
     let refresh = required_string(payload, "refresh_token")?;
     let expires = seconds(payload, "expires_in", None)?;
     Ok(json!({
-        "access_token": access, "refresh_token": refresh,
-        "expires_at": chrono::Utc::now().timestamp() + expires as i64,
-        "expires_in": expires, "token_type": payload["token_type"].as_str().unwrap_or("Bearer"),
-        "scope": payload["scope"].as_str().unwrap_or("")
+    "access_token": access, "refresh_token": refresh,
+    "expires_at": chrono::Utc::now().timestamp() + expires as i64,
+    "expires_in": expires, "token_type": payload["token_type"].as_str().unwrap_or("Bearer"),
+    "scope": payload["scope"].as_str().unwrap_or("")
     }))
 }
-
 fn parse_models(payload: &Value) -> Result<Map<String, Value>, String> {
     let data = payload["data"]
         .as_array()
@@ -634,12 +593,10 @@ fn parse_models(payload: &Value) -> Result<Map<String, Value>, String> {
     }
     Ok(models)
 }
-
 impl KimiOAuthManager {
     fn store(&self) -> PathBuf {
         self.store.clone().unwrap_or_else(account::store_path)
     }
-
     #[cfg(test)]
     fn with_store(store: PathBuf) -> Self {
         Self {
@@ -647,26 +604,22 @@ impl KimiOAuthManager {
             store: Some(store),
         }
     }
-
     pub async fn status(&self) -> Result<KimiOAuthStatus, String> {
         let home = kimi_config::data_dir();
         let store = self.store();
         account::identify_accounts(&home, &store).await;
         accounts_status(&home, &store)
     }
-
     pub async fn quota(&self, account_id: &str) -> Result<SubscriptionQuota, String> {
         let home = kimi_config::data_dir();
         let device = device_id(&home)?;
         account::quota(&home, &self.store(), account_id, &device).await
     }
-
     /// The account's current model catalog, keyed and shaped as signing in
     /// would write it, for the card editor. Nothing is saved here.
     pub async fn models(&self, account_id: &str) -> Result<Map<String, Value>, String> {
         models_at(&kimi_config::data_dir(), &self.store(), account_id).await
     }
-
     pub async fn start(
         &self,
         region: KimiRegion,
@@ -676,7 +629,6 @@ impl KimiOAuthManager {
         let (endpoints, oauth) = login_target(&home, region, account_id.as_deref())?;
         self.start_login(home, endpoints, account_id, oauth).await
     }
-
     #[cfg(test)]
     async fn start_with(
         &self,
@@ -685,7 +637,6 @@ impl KimiOAuthManager {
     ) -> Result<KimiLoginStart, String> {
         self.start_login(home, endpoints, None, None).await
     }
-
     async fn start_login(
         &self,
         home: PathBuf,
@@ -754,7 +705,6 @@ impl KimiOAuthManager {
             interval,
         })
     }
-
     pub async fn poll(&self, flow_id: &str) -> Result<KimiLoginPoll, String> {
         let mut flow = {
             let mut pending = self.pending.lock().await;
@@ -810,7 +760,6 @@ impl KimiOAuthManager {
             }
         }
     }
-
     async fn advance(flow: &mut PendingLogin) -> Result<PollOutcome, String> {
         flow.next_poll = Instant::now() + Duration::from_secs(flow.interval);
         if flow.credential.is_none() {
@@ -869,7 +818,6 @@ impl KimiOAuthManager {
         }
         Ok(PollOutcome::Ready(parse_models(&payload)?))
     }
-
     pub async fn cancel(&self, flow_id: &str) -> bool {
         let mut pending = self.pending.lock().await;
         if pending.as_ref().is_some_and(|p| p.id == flow_id) {
@@ -879,7 +827,6 @@ impl KimiOAuthManager {
             false
         }
     }
-
     /// Save a finished login under Kimi's credential lock, then remember who
     /// signed in. Runs with the pending flow locked, so it cannot race a new start.
     async fn commit(flow: &PendingLogin, models: Map<String, Value>) -> Result<(), String> {
@@ -919,7 +866,6 @@ impl KimiOAuthManager {
         }
         Ok(())
     }
-
     /// Remove an account from the Authorization Center. Separate accounts lose
     /// their provider, model aliases, credential and saved profile
     /// (`delete_profile`). Kimi's own default login is only hidden from the
@@ -945,7 +891,6 @@ impl KimiOAuthManager {
         )
         .await
     }
-
     pub async fn use_account(&self, account_id: &str) -> Result<(), String> {
         let _pending = self.pending.lock().await;
         let home = kimi_config::data_dir();
@@ -965,7 +910,6 @@ impl KimiOAuthManager {
         kimi_config::use_oauth_account(&home, account_id).map_err(|e| e.to_string())
     }
 }
-
 async fn models_at(
     home: &Path,
     store: &Path,
@@ -1010,7 +954,6 @@ async fn models_at(
         nickname.as_deref(),
     ))
 }
-
 async fn remove_at(
     home: &Path,
     store: &Path,
@@ -1058,7 +1001,6 @@ async fn remove_at(
         store.accounts.remove(account_id);
     })
 }
-
 /// Nicknames of Kimi official accounts, keyed by provider id, for card names.
 pub(crate) fn account_nicknames() -> std::collections::HashMap<String, String> {
     account::Store::load(&account::store_path())
@@ -1067,7 +1009,6 @@ pub(crate) fn account_nicknames() -> std::collections::HashMap<String, String> {
         .filter_map(|(id, identity)| identity.nickname.map(|nickname| (id, nickname)))
         .collect()
 }
-
 /// Switching to an official account card needs its login on this machine; a
 /// profile synced from another device would otherwise point Kimi at nothing.
 pub(crate) fn ensure_profile_signed_in(settings: &Value) -> Result<(), crate::error::AppError> {
@@ -1077,14 +1018,13 @@ pub(crate) fn ensure_profile_signed_in(settings: &Value) -> Result<(), crate::er
     account::ensure_signed_in(&kimi_config::data_dir(), &settings["provider"]["oauth"]).map_err(
         |_| {
             crate::error::AppError::localized(
-                "kimi.account.not_signed_in",
-                "这个 Kimi 账号没有在本机登录，请到授权中心登录后再切换",
-                "This Kimi account is not signed in on this computer; sign in from the Authorization Center first",
-            )
+"kimi.account.not_signed_in",
+"这个 Kimi 账号没有在本机登录，请到授权中心登录后再切换",
+"This Kimi account is not signed in on this computer; sign in from the Authorization Center first",
+)
         },
     )
 }
-
 /// After deleting a profile whose node Kimi no longer has, also delete the
 /// credential of a CC Switch-owned slot so it does not linger on disk.
 pub(crate) fn forget_removed_profile(id: &str, settings: &Value) -> Result<(), String> {
@@ -1099,7 +1039,6 @@ pub(crate) fn forget_removed_profile(id: &str, settings: &Value) -> Result<(), S
         store.accounts.remove(id);
     })
 }
-
 /// Move discovered models under the account. Separate accounts also name
 /// themselves in `display_name`, so Kimi's model picker can tell them apart.
 /// Point the catalog at `account_id`. Separate accounts' aliases are prefixed
@@ -1127,7 +1066,6 @@ fn scope_models(
         })
         .collect()
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1145,7 +1083,6 @@ mod tests {
         },
     };
     use tokio::sync::Notify;
-
     #[derive(Default)]
     struct MockState {
         mode: AtomicUsize,
@@ -1159,7 +1096,6 @@ mod tests {
         discovery_started: Notify,
         resume: Notify,
     }
-
     struct Server {
         state: Arc<MockState>,
         endpoints: Endpoints,
@@ -1170,65 +1106,64 @@ mod tests {
             self.task.abort();
         }
     }
-
     async fn server(mode: usize) -> Server {
         let state = Arc::new(MockState::default());
         state.mode.store(mode, Ordering::SeqCst);
         let router = Router::new()
-            .route("/api/oauth/device_authorization", post(|Form(form): Form<HashMap<String, String>>| async move {
-                assert_eq!(form["client_id"], CLIENT_ID);
-                Json(json!({"device_code":"private-device-code", "user_code":"ABCD-EFGH",
-                    "verification_uri_complete":"https://auth.kimi.com/verify?user_code=ABCD-EFGH", "expires_in":600,"interval":1}))
-            }))
-            .route("/api/oauth/token", post(|State(state): State<Arc<MockState>>, Form(form): Form<HashMap<String, String>>| async move {
-                assert_eq!(form["client_id"], CLIENT_ID);
-                if form["grant_type"] == "refresh_token" {
-                    let n = state.refreshes.fetch_add(1, Ordering::SeqCst);
-                    if state.account_mode.load(Ordering::SeqCst) == 1 {
-                        return (StatusCode::BAD_REQUEST, Json(json!({"error":"invalid_grant"})));
-                    }
-                    assert!(form["refresh_token"].starts_with("private-refresh"));
-                    return (StatusCode::OK, Json(json!({"access_token":format!("refreshed-access-{n}"),
-                        "refresh_token":format!("private-refresh-rotated-{n}"), "expires_in":900})));
-                }
-                assert_eq!(form["grant_type"], "urn:ietf:params:oauth:grant-type:device_code");
-                assert_eq!(form["device_code"], "private-device-code");
-                let attempt = state.tokens.fetch_add(1, Ordering::SeqCst);
-                let error = match (state.mode.load(Ordering::SeqCst), attempt) {
-                    (1, 0) => Some("authorization_pending"), (1, 1) => Some("slow_down"),
-                    (2, _) => Some("access_denied"), (4, _) => Some("expired_token"), _ => None,
-                };
-                if let Some(error) = error { (StatusCode::BAD_REQUEST, Json(json!({"error":error}))) }
-                else {
-                    let user = state.user.load(Ordering::SeqCst);
-                    (StatusCode::OK, Json(json!({"access_token":format!("private-access-{user}"),
-                        "refresh_token":format!("private-refresh-{user}"), "expires_in":3600})))
-                }
-            }))
-            .route("/me", get(|State(state): State<Arc<MockState>>, headers: axum::http::HeaderMap| async move {
-                if state.account_mode.load(Ordering::SeqCst) == 2 {
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({})));
-                }
-                let auth = headers["authorization"].to_str().unwrap().to_string();
-                let user = auth.rsplit('-').next().unwrap().to_string();
-                (StatusCode::OK, Json(json!({"user_id":format!("user-{user}"), "nickname":format!("Nick{user}"), "phone":"private-phone"})))
-            }))
-            .route("/usages", get(|| async {
-                Json(json!({"usage":{"limit":"100","remaining":"40","resetTime":"2030-01-01T00:00:00Z"}}))
-            }))
-            .route("/models", get(|State(state): State<Arc<MockState>>| async move {
-                let attempt = state.models.fetch_add(1, Ordering::SeqCst);
-                if state.mode.load(Ordering::SeqCst) == 3 {
-                    state.discovery_started.notify_one();
-                    state.resume.notified().await;
-                }
-                if state.mode.load(Ordering::SeqCst) == 5 && attempt == 0 {
-                    return (StatusCode::SERVICE_UNAVAILABLE, Json(json!({"error":"temporary"})));
-                }
-                (StatusCode::OK, Json(json!({"data":[{"id":"k3","limit":{"context":1048576},"protocol":"response",
-                    "reasoning":{"type":"only","effort":{"valid":["max"],"default":"max"}},"modalities":{"input":["text","image"]}}]})))
-            }))
-            .with_state(state.clone());
+.route("/api/oauth/device_authorization", post(|Form(form): Form<HashMap<String, String>>| async move {
+assert_eq!(form["client_id"], CLIENT_ID);
+Json(json!({"device_code":"private-device-code", "user_code":"ABCD-EFGH",
+"verification_uri_complete":"https://auth.kimi.com/verify?user_code=ABCD-EFGH", "expires_in":600,"interval":1}))
+}))
+.route("/api/oauth/token", post(|State(state): State<Arc<MockState>>, Form(form): Form<HashMap<String, String>>| async move {
+assert_eq!(form["client_id"], CLIENT_ID);
+if form["grant_type"] == "refresh_token" {
+let n = state.refreshes.fetch_add(1, Ordering::SeqCst);
+if state.account_mode.load(Ordering::SeqCst) == 1 {
+return (StatusCode::BAD_REQUEST, Json(json!({"error":"invalid_grant"})));
+}
+assert!(form["refresh_token"].starts_with("private-refresh"));
+return (StatusCode::OK, Json(json!({"access_token":format!("refreshed-access-{n}"),
+"refresh_token":format!("private-refresh-rotated-{n}"), "expires_in":900})));
+}
+assert_eq!(form["grant_type"], "urn:ietf:params:oauth:grant-type:device_code");
+assert_eq!(form["device_code"], "private-device-code");
+let attempt = state.tokens.fetch_add(1, Ordering::SeqCst);
+let error = match (state.mode.load(Ordering::SeqCst), attempt) {
+(1, 0) => Some("authorization_pending"), (1, 1) => Some("slow_down"),
+(2, _) => Some("access_denied"), (4, _) => Some("expired_token"), _ => None,
+};
+if let Some(error) = error { (StatusCode::BAD_REQUEST, Json(json!({"error":error}))) }
+else {
+let user = state.user.load(Ordering::SeqCst);
+(StatusCode::OK, Json(json!({"access_token":format!("private-access-{user}"),
+"refresh_token":format!("private-refresh-{user}"), "expires_in":3600})))
+}
+}))
+.route("/me", get(|State(state): State<Arc<MockState>>, headers: axum::http::HeaderMap| async move {
+if state.account_mode.load(Ordering::SeqCst) == 2 {
+return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({})));
+}
+let auth = headers["authorization"].to_str().unwrap().to_string();
+let user = auth.rsplit('-').next().unwrap().to_string();
+(StatusCode::OK, Json(json!({"user_id":format!("user-{user}"), "nickname":format!("Nick{user}"), "phone":"private-phone"})))
+}))
+.route("/usages", get(|| async {
+Json(json!({"usage":{"limit":"100","remaining":"40","resetTime":"2030-01-01T00:00:00Z"}}))
+}))
+.route("/models", get(|State(state): State<Arc<MockState>>| async move {
+let attempt = state.models.fetch_add(1, Ordering::SeqCst);
+if state.mode.load(Ordering::SeqCst) == 3 {
+state.discovery_started.notify_one();
+state.resume.notified().await;
+}
+if state.mode.load(Ordering::SeqCst) == 5 && attempt == 0 {
+return (StatusCode::SERVICE_UNAVAILABLE, Json(json!({"error":"temporary"})));
+}
+(StatusCode::OK, Json(json!({"data":[{"id":"k3","limit":{"context":1048576},"protocol":"response",
+"reasoning":{"type":"only","effort":{"valid":["max"],"default":"max"}},"modalities":{"input":["text","image"]}}]})))
+}))
+.with_state(state.clone());
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let host = format!("http://{}", listener.local_addr().unwrap());
         let task = tokio::spawn(async move {
@@ -1243,11 +1178,9 @@ mod tests {
             task,
         }
     }
-
     async fn due(manager: &KimiOAuthManager) {
         manager.pending.lock().await.as_mut().unwrap().next_poll = Instant::now();
     }
-
     #[test]
     fn selected_region_uses_fixed_endpoints_even_with_process_overrides() {
         struct RestoreEnv(Vec<(&'static str, Option<std::ffi::OsString>)>);
@@ -1293,13 +1226,12 @@ mod tests {
             assert!(oauth.is_none());
         }
     }
-
     #[test]
     fn reauthentication_keeps_account_region_and_slot_with_fixed_official_hosts() {
         let dir = tempfile::tempdir().unwrap();
         let config = json!({"providers":{
-            "cn":{"type":"kimi","base_url":"https://api.kimi.com/coding/v1","oauth":{"storage":"file","key":"oauth/account-cn","oauth_host":"https://old-cn.example"}},
-            "global":{"type":"kimi","base_url":"https://api.kimi.ai/coding/v1","oauth":{"storage":"file","key":"oauth/account-global","oauth_host":"https://old-global.example"}}
+        "cn":{"type":"kimi","base_url":"https://api.kimi.com/coding/v1","oauth":{"storage":"file","key":"oauth/account-cn","oauth_host":"https://old-cn.example"}},
+        "global":{"type":"kimi","base_url":"https://api.kimi.ai/coding/v1","oauth":{"storage":"file","key":"oauth/account-global","oauth_host":"https://old-global.example"}}
         }});
         let path = dir.path().join("config.toml");
         fs::write(&path, toml::to_string(&config).unwrap()).unwrap();
@@ -1329,7 +1261,6 @@ mod tests {
         }
         assert_eq!(fs::read(&path).unwrap(), before);
     }
-
     #[tokio::test]
     async fn network_failure_reports_its_cause_without_url_credentials() {
         use std::error::Error;
@@ -1353,7 +1284,6 @@ mod tests {
         assert!(!detail.contains("private-credential"));
         assert!(!detail.contains("/authorize"));
     }
-
     #[test]
     fn first_login_uses_native_slot_and_later_accounts_preserve_it() {
         let dir = tempfile::tempdir().unwrap();
@@ -1364,7 +1294,6 @@ mod tests {
             new_account(dir.path(), &endpoints, "first", None).unwrap(),
             (PROVIDER_ID.into(), native_oauth.clone())
         );
-
         let path = credential_path(dir.path(), &native_oauth).unwrap();
         atomic_write_private(&path, b"existing-native-credential").unwrap();
         // An orphaned credential does not prevent restoring the native provider.
@@ -1392,7 +1321,6 @@ mod tests {
                 .0,
             "kimi-code-ccs-global"
         );
-
         fs::remove_file(&path).unwrap();
         assert_eq!(
             new_account(dir.path(), &endpoints, "missing-token", None).unwrap(),
@@ -1400,7 +1328,6 @@ mod tests {
         );
         assert_eq!(fs::read(dir.path().join("config.toml")).unwrap(), original);
     }
-
     #[test]
     fn readable_provider_id_follows_kimi_name_rules() {
         let label = "Kimi 订阅";
@@ -1422,17 +1349,15 @@ mod tests {
         assert_eq!(readable_provider_id(&json!({}), label, Some("..")), None);
         assert_eq!(readable_provider_id(&json!({}), label, None), None);
     }
-
     #[test]
     fn global_native_slot_matches_kimi_environment_key() {
         assert_eq!(
             KimiRegion::Global.endpoints().oauth_ref(),
             json!({
-                "storage":"file", "key":"oauth/kimi-code-env-0e4f99c69cc27850", "oauth_host":"https://auth.kimi.ai"
+            "storage":"file", "key":"oauth/kimi-code-env-0e4f99c69cc27850", "oauth_host":"https://auth.kimi.ai"
             })
         );
     }
-
     async fn login_as(manager: &KimiOAuthManager, server: &Server, dir: &Path, user: usize) {
         server.state.user.store(user, Ordering::SeqCst);
         let flow = manager
@@ -1442,11 +1367,9 @@ mod tests {
         due(manager).await;
         assert!(manager.poll(&flow.flow_id).await.unwrap().authenticated);
     }
-
     fn store_of(dir: &Path) -> account::Store {
         account::Store::load(&dir.join("accounts.json"))
     }
-
     #[tokio::test]
     async fn multiple_logins_isolate_credentials_models_reauthentication_and_removal() {
         let server = server(0).await;
@@ -1503,12 +1426,10 @@ mod tests {
             .path()
             .join(format!("oauth/kimi-code-ccs-{suffix}.lock"))
             .exists());
-
         kimi_config::use_oauth_account(dir.path(), second).unwrap();
         let selected = read_config(dir.path()).unwrap();
         assert_eq!(selected["default_model"], format!("{slot}/k3"));
         assert_eq!(selected["services"], config["services"]);
-
         // Signing in to the same account again (without asking for a re-login)
         // updates it in place instead of adding a duplicate slot.
         login_as(&manager, &server, dir.path(), 2).await;
@@ -1531,7 +1452,6 @@ mod tests {
             .collect();
         assert_eq!(ids.len(), 2, "{ids:?}");
         assert_eq!(fs::read(&first_path).unwrap(), first_bytes);
-
         // The account in use cannot be removed.
         let error = remove_at(dir.path(), &store, second, || Ok(()))
             .await
@@ -1551,7 +1471,6 @@ mod tests {
             toml::to_string(&pointed).unwrap(),
         )
         .unwrap();
-
         let mut profile_deleted = false;
         remove_at(dir.path(), &store, second, || {
             profile_deleted = true;
@@ -1579,7 +1498,6 @@ mod tests {
             after["providers"][first]["oauth"]
         );
         assert!(!accounts_status(dir.path(), &store).unwrap().primary_hidden);
-
         // Kimi's own default login is only hidden, never logged out.
         let before = fs::read(dir.path().join("config.toml")).unwrap();
         remove_at(dir.path(), &store, first, || panic!("profile must stay"))
@@ -1621,7 +1539,6 @@ mod tests {
             .await
             .is_err());
     }
-
     #[tokio::test]
     async fn relogin_with_a_different_account_never_overwrites_the_target() {
         let server = server(0).await;
@@ -1652,7 +1569,6 @@ mod tests {
             2
         );
     }
-
     #[tokio::test]
     async fn login_without_identity_still_saves_the_account() {
         let server = server(0).await;
@@ -1665,7 +1581,6 @@ mod tests {
         assert_eq!(status.accounts[0].name, "Kimi Official");
         assert!(status.accounts[0].nickname.is_none());
     }
-
     fn separate_account(server: &Server, dir: &Path, credential: Value) -> Value {
         let oauth = json!({"storage":"file","key":"oauth/kimi-code-ccs-test","oauth_host":server.endpoints.oauth_host});
         let models =
@@ -1682,7 +1597,6 @@ mod tests {
         .unwrap();
         read_config(dir).unwrap()["providers"]["kimi-code-ccs-test"].clone()
     }
-
     #[tokio::test]
     async fn model_catalog_for_the_editor_uses_the_accounts_slot_and_saves_nothing() {
         let server = server(0).await;
@@ -1711,7 +1625,6 @@ mod tests {
         assert_eq!(fs::read(dir.path().join("config.toml")).unwrap(), before);
         assert!(models_at(dir.path(), &store, "custom").await.is_err());
     }
-
     #[cfg(unix)]
     #[tokio::test]
     async fn quota_refreshes_an_expired_token_under_kimis_lock() {
@@ -1719,10 +1632,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = dir.path().join("accounts.json");
         let expired = json!({"access_token":"private-access-old","refresh_token":"private-refresh-old",
-            "expires_at":1,"expires_in":900,"scope":"kimi","token_type":"Bearer"});
+"expires_at":1,"expires_in":900,"scope":"kimi","token_type":"Bearer"});
         separate_account(&server, dir.path(), expired);
         let path = dir.path().join("credentials/kimi-code-ccs-test.json");
-
         let quota = account::quota(dir.path(), &store, "kimi-code-ccs-test", "device")
             .await
             .unwrap();
@@ -1733,13 +1645,11 @@ mod tests {
         assert_eq!(saved["refresh_token"], "private-refresh-rotated-0");
         assert!(saved["expires_at"].as_i64().unwrap() > chrono::Utc::now().timestamp());
         assert!(!dir.path().join("oauth/kimi-code-ccs-test.lock").exists());
-
         // A fresh token is used as is.
         account::quota(dir.path(), &store, "kimi-code-ccs-test", "device")
             .await
             .unwrap();
         assert_eq!(server.state.refreshes.load(Ordering::SeqCst), 1);
-
         // A card synced from another device: no node, or a node without a login here.
         let quota = account::quota(dir.path(), &store, "kimi-code-ccs-elsewhere", "device")
             .await
@@ -1757,7 +1667,6 @@ mod tests {
             crate::services::subscription::CredentialStatus::NotFound
         ));
     }
-
     #[cfg(unix)]
     #[tokio::test]
     async fn rejected_refresh_writes_kimis_tombstone_unless_another_process_rotated_it() {
@@ -1765,7 +1674,7 @@ mod tests {
         server.state.account_mode.store(1, Ordering::SeqCst);
         let dir = tempfile::tempdir().unwrap();
         let expired = json!({"access_token":"private-access-old","refresh_token":"private-refresh-old",
-            "expires_at":1,"expires_in":900,"scope":"kimi","token_type":"Bearer"});
+"expires_at":1,"expires_in":900,"scope":"kimi","token_type":"Bearer"});
         let provider = separate_account(&server, dir.path(), expired);
         let path = dir.path().join("credentials/kimi-code-ccs-test.json");
         assert!(matches!(
@@ -1782,11 +1691,10 @@ mod tests {
         assert!(!status.accounts[0].authenticated);
         assert!(account::ensure_signed_in(dir.path(), &provider["oauth"]).is_err());
         assert!(account::ensure_signed_in(dir.path(), &json!({"key":"oauth/missing"})).is_err());
-
         // Kimi rotated the token while our request was in flight: adopt its
         // token instead of revoking the login.
         let expired = json!({"access_token":"private-access-old","refresh_token":"private-refresh-old",
-            "expires_at":1,"expires_in":900});
+"expires_at":1,"expires_in":900});
         fs::write(&path, serde_json::to_vec(&expired).unwrap()).unwrap();
         let state = server.state.clone();
         let rotated = path.clone();
@@ -1795,7 +1703,7 @@ mod tests {
                 tokio::time::sleep(Duration::from_millis(5)).await;
             }
             let token = json!({"access_token":"other-access","refresh_token":"private-refresh-other",
-                "expires_at":chrono::Utc::now().timestamp() + 900,"expires_in":900});
+"expires_at":chrono::Utc::now().timestamp() + 900,"expires_in":900});
             fs::write(&rotated, serde_json::to_vec(&token).unwrap()).unwrap();
         });
         match account::access_token(dir.path(), &provider, "device")
@@ -1808,7 +1716,6 @@ mod tests {
         other.await.unwrap();
         assert!(account::ensure_signed_in(dir.path(), &provider["oauth"]).is_ok());
     }
-
     #[test]
     fn only_cc_switch_slots_are_deleted_with_a_removed_profile() {
         let dir = tempfile::tempdir().unwrap();
@@ -1827,7 +1734,6 @@ mod tests {
             .join("credentials/kimi-code-ccs-abc.json")
             .exists());
     }
-
     #[test]
     fn native_account_and_other_accounts_remain_visible_when_one_credential_is_corrupt() {
         let dir = tempfile::tempdir().unwrap();
@@ -1838,11 +1744,11 @@ mod tests {
             let models =
                 parse_models(&json!({"data":[{"id":"k3","limit":{"context":1048576}}]})).unwrap();
             kimi_config::save_oauth_login(
-                dir.path(), id, &dir.path().join(format!("credentials/{key}.json")),
-                br#"{"access_token":"private-access","refresh_token":"private-refresh","expires_at":1}"#,
-                "https://api.kimi.com/coding/v1", json!({"storage":"file","key":format!("oauth/{key}")}),
-                scope_models(models, id, id, None),
-            ).unwrap();
+dir.path(), id, &dir.path().join(format!("credentials/{key}.json")),
+br#"{"access_token":"private-access","refresh_token":"private-refresh","expires_at":1}"#,
+"https://api.kimi.com/coding/v1", json!({"storage":"file","key":format!("oauth/{key}")}),
+scope_models(models, id, id, None),
+).unwrap();
         }
         fs::write(
             dir.path().join("credentials/kimi-code-ccs-new.json"),
@@ -1866,14 +1772,13 @@ mod tests {
         assert!(!broken.authenticated && broken.error.is_some());
         assert!(!serde_json::to_string(&status).unwrap().contains("private-"));
     }
-
     #[test]
     fn anthropic_models_write_beta_api_and_clear_it_after_protocol_change() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.toml");
         let mut payload = json!({"data": [{
-            "id": "k3", "limit": {"context": 1048576},
-            "protocol": "anthropic", "reasoning": {"type": "both"}
+        "id": "k3", "limit": {"context": 1048576},
+        "protocol": "anthropic", "reasoning": {"type": "both"}
         }]});
         let save_models = |payload: &Value| {
             kimi_config::save_oauth_login(
@@ -1887,7 +1792,6 @@ mod tests {
             )
             .unwrap();
         };
-
         save_models(&payload);
         let native = fs::read_to_string(&path).unwrap();
         let config: Value = toml::from_str(&native).unwrap();
@@ -1897,7 +1801,6 @@ mod tests {
         assert_eq!(model["adaptive_thinking"], true);
         assert!(model.get("use_beta").is_none());
         assert!(native.contains("beta_api = true"));
-
         payload["data"][0]["protocol"] = json!("response");
         save_models(&payload);
         let config: Value = toml::from_str(&fs::read_to_string(path).unwrap()).unwrap();
@@ -1906,7 +1809,6 @@ mod tests {
         assert!(model.get("beta_api").is_none());
         assert!(model.get("adaptive_thinking").is_none());
     }
-
     #[tokio::test]
     async fn official_device_flow_obeys_interval_slowdown_and_provisions_native_login() {
         let server = server(1).await;
@@ -1952,7 +1854,6 @@ mod tests {
             server.endpoints.oauth_ref()
         );
     }
-
     #[tokio::test]
     async fn cancellation_during_model_discovery_prevents_all_login_writes() {
         let server = server(3).await;
@@ -1975,7 +1876,6 @@ mod tests {
         assert!(!dir.path().join("config.toml").exists());
         assert!(!dir.path().join("credentials").exists());
     }
-
     #[tokio::test]
     async fn retry_after_model_failure_does_not_redeem_device_grant_twice() {
         let server = server(5).await;
@@ -1997,7 +1897,6 @@ mod tests {
         assert_eq!(server.state.tokens.load(Ordering::SeqCst), 1);
         assert_eq!(server.state.models.load(Ordering::SeqCst), 2);
     }
-
     #[tokio::test]
     async fn denied_expired_and_replaced_flows_do_not_save_credentials() {
         for (mode, reason) in [(2, "denied"), (4, "expired")] {
@@ -2024,7 +1923,6 @@ mod tests {
             assert!(!dir.path().join("credentials").exists());
         }
     }
-
     #[test]
     fn scoped_global_credentials_match_official_client_and_reject_path_traversal() {
         let home = Path::new("kimi");
@@ -2043,7 +1941,6 @@ mod tests {
         assert!(parse_credential(&json!({"access_token":"x", "expires_in":3600})).is_err());
         assert!(parse_models(&json!({"data":[{"id":"bad","limit":{"context":0}}]})).is_err());
     }
-
     #[test]
     fn existing_expired_access_with_refresh_is_signed_in_and_tombstone_is_signed_out() {
         let dir = tempfile::tempdir().unwrap();

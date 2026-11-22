@@ -94,7 +94,7 @@ fn conversation_fingerprint(body: &Value) -> Option<String> {
     if !fed {
         return None;
     }
-    let digest = format!("{}", hex_encode(&hasher.finalize()));
+    let digest = hex_encode(&hasher.finalize());
     Some(format!("ccsw-{}", &digest[..32]))
 }
 
